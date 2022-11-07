@@ -90,8 +90,8 @@ fn main() -> Result<(), Error> {
 }
 
 static SCREEN_MATRIX_3D: Matrix2x3 = Matrix2x3 {
-    x: Pos3D { x: 0.866, y: 0.0, z: -0.866 },
-    y: Pos3D { x: -0.5, y: -1.0, z: -0.5 },
+    x: Pos3D { x:  0.866, y:  0.0, z: -0.866 },
+    y: Pos3D { x: -0.5,   y:  1.0, z: -0.5   },
 };
 
 // fn perspective(pos: Pos4D, size: PhysicalSize<u32>) -> Pos2D {
@@ -105,12 +105,12 @@ static SCREEN_MATRIX_3D: Matrix2x3 = Matrix2x3 {
 //     }
 // }
 
-fn sterographic(pos: Pos4D, size: PhysicalSize<u32>) -> Pos2D {
-    let pos_4d = pos * (1.0 / pos.len());
+fn sterographic(pos: Pos4D, size: PhysicalSize<u32>) -> Pos2D {    
     let pos_3d = Pos3D {
-        x: pos_4d.x / (1.0 + pos_4d.w), 
-        y: pos_4d.y / (1.0 + pos_4d.w), 
-        z: pos_4d.z / (1.0 + pos_4d.w),
+        x: (pos.x / (2.0 + pos.w)), 
+        y: (pos.y / (2.0 + pos.w)), 
+        z: (pos.z / (2.0 + pos.w)),
     };
-    SCREEN_MATRIX_3D * pos_3d * SCALE + Pos2D { x: size.width as f64 / 2.0, y: size.height as f64 / 2.0 }
+
+    (pos_3d * SCALE).to_screen_coords(SCREEN_MATRIX_3D, size)
 }
