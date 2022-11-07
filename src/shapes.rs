@@ -116,33 +116,24 @@ impl Render for Edge {
                     let x_p = (edge[0] * i as f64 * resolution) as i32 + x_off + start_point.x as i32;
                     let y_p = (edge[1] * i as f64 * resolution) as i32 + y_off + start_point.y as i32;
 
-                    // Calculate the index of the current coordinate
-                    if x_p <= size.width as i32 && x_p >= 0 && y_p <= size.height as i32 && y_p >= 0 {
-                        let i = (y_p * size.width as i32) as usize + x_p as usize;
-                    
-                        // Update for every color
-                        if i * 4 < screen.len() && i * 4 > 0 {
-                            for c in 0..3 {
-                                screen[i * 4 + c] = rgba[c];
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+
+pub fn empty() -> Object {
+    let nodes: Vec<Node> = Vec::new();
+    let edges: Vec<Edge> = Vec::new();
+
+    Object { nodes, edges }
 }
 
-pub fn create_3_cube() -> Object {
+pub fn create_3_cube(r: f64) -> Object {
     let points: [Pos4D; 8] = [
-        Pos4D { x: -1.0, y: -1.0, z: -1.0, w:  0.0},
-        Pos4D { x: -1.0, y: -1.0, z:  1.0, w:  0.0},
-        Pos4D { x: -1.0, y:  1.0, z: -1.0, w:  0.0},
-        Pos4D { x: -1.0, y:  1.0, z:  1.0, w:  0.0},
-        Pos4D { x:  1.0, y: -1.0, z: -1.0, w:  0.0},
-        Pos4D { x:  1.0, y: -1.0, z:  1.0, w:  0.0},
-        Pos4D { x:  1.0, y:  1.0, z: -1.0, w:  0.0},
-        Pos4D { x:  1.0, y:  1.0, z:  1.0, w:  0.0},
+        Pos4D { x: r * -1.0, y: r * -1.0, z: r * -1.0, w: r * 0.0},
+        Pos4D { x: r * -1.0, y: r * -1.0, z: r *  1.0, w: r * 0.0},
+        Pos4D { x: r * -1.0, y: r *  1.0, z: r * -1.0, w: r * 0.0},
+        Pos4D { x: r * -1.0, y: r *  1.0, z: r *  1.0, w: r * 0.0},
+        Pos4D { x: r *  1.0, y: r * -1.0, z: r * -1.0, w: r * 0.0},
+        Pos4D { x: r *  1.0, y: r * -1.0, z: r *  1.0, w: r * 0.0},
+        Pos4D { x: r *  1.0, y: r *  1.0, z: r * -1.0, w: r * 0.0},
+        Pos4D { x: r *  1.0, y: r *  1.0, z: r *  1.0, w: r * 0.0},
     ];
 
     Object {
@@ -176,24 +167,24 @@ pub fn create_3_cube() -> Object {
     }
 }
 
-pub fn create_4_cube() -> Object {
+pub fn create_4_cube(r: f64) -> Object {
     let points = [
-        Pos4D { x: -1.0, y: -1.0, z: -1.0, w: -1.0},
-        Pos4D { x: -1.0, y: -1.0, z: -1.0, w:  1.0},
-        Pos4D { x: -1.0, y: -1.0, z:  1.0, w: -1.0},
-        Pos4D { x: -1.0, y: -1.0, z:  1.0, w:  1.0},
-        Pos4D { x: -1.0, y:  1.0, z: -1.0, w: -1.0},
-        Pos4D { x: -1.0, y:  1.0, z: -1.0, w:  1.0},
-        Pos4D { x: -1.0, y:  1.0, z:  1.0, w: -1.0},
-        Pos4D { x: -1.0, y:  1.0, z:  1.0, w:  1.0},
-        Pos4D { x:  1.0, y: -1.0, z: -1.0, w: -1.0},
-        Pos4D { x:  1.0, y: -1.0, z: -1.0, w:  1.0},
-        Pos4D { x:  1.0, y: -1.0, z:  1.0, w: -1.0},
-        Pos4D { x:  1.0, y: -1.0, z:  1.0, w:  1.0},
-        Pos4D { x:  1.0, y:  1.0, z: -1.0, w: -1.0},
-        Pos4D { x:  1.0, y:  1.0, z: -1.0, w:  1.0},
-        Pos4D { x:  1.0, y:  1.0, z:  1.0, w: -1.0},
-        Pos4D { x:  1.0, y:  1.0, z:  1.0, w:  1.0},
+        Pos4D { x: r * -1.0, y: r * -1.0, z: r * -1.0, w: r * -1.0},
+        Pos4D { x: r * -1.0, y: r * -1.0, z: r * -1.0, w: r *  1.0},
+        Pos4D { x: r * -1.0, y: r * -1.0, z: r *  1.0, w: r * -1.0},
+        Pos4D { x: r * -1.0, y: r * -1.0, z: r *  1.0, w: r *  1.0},
+        Pos4D { x: r * -1.0, y: r *  1.0, z: r * -1.0, w: r * -1.0},
+        Pos4D { x: r * -1.0, y: r *  1.0, z: r * -1.0, w: r *  1.0},
+        Pos4D { x: r * -1.0, y: r *  1.0, z: r *  1.0, w: r * -1.0},
+        Pos4D { x: r * -1.0, y: r *  1.0, z: r *  1.0, w: r *  1.0},
+        Pos4D { x: r *  1.0, y: r * -1.0, z: r * -1.0, w: r * -1.0},
+        Pos4D { x: r *  1.0, y: r * -1.0, z: r * -1.0, w: r *  1.0},
+        Pos4D { x: r *  1.0, y: r * -1.0, z: r *  1.0, w: r * -1.0},
+        Pos4D { x: r *  1.0, y: r * -1.0, z: r *  1.0, w: r *  1.0},
+        Pos4D { x: r *  1.0, y: r *  1.0, z: r * -1.0, w: r * -1.0},
+        Pos4D { x: r *  1.0, y: r *  1.0, z: r * -1.0, w: r *  1.0},
+        Pos4D { x: r *  1.0, y: r *  1.0, z: r *  1.0, w: r * -1.0},
+        Pos4D { x: r *  1.0, y: r *  1.0, z: r *  1.0, w: r *  1.0},
     ];
 
     Object {
@@ -284,52 +275,38 @@ pub fn create_3_sphere(res: i32) -> Object {
     Object { nodes, edges }
 }
 
-pub fn create_4_sphere(res: i32) -> Object {
+pub fn create_4_sphere(res: i32, r: f64) -> Object {
     let mut nodes: Vec<Node> = Vec::new();
     let edges: Vec<Edge> = Vec::new();
 
-    let res_per_plane = res / 6;
+    let res_per_plane = (res as f64).sqrt() as i32;
 
-    // XY plane
-    for i in 0..res_per_plane {
-        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
-        let pos = Pos4D { x: angle.cos(), y: angle.sin(), z: 0.0, w: 0.0 };
-        nodes.push(Node { pos, r: 0.1 });
-    }
-    
     // XZ plane
     for i in 0..res_per_plane {
-        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
-        let pos = Pos4D { x: angle.cos(), y: 0.0, z: angle.sin(), w: 0.0 };
-        nodes.push(Node { pos, r: 0.1 });
-    }
+        let cos_t: f64 = ((2.0 * PI) / res_per_plane as f64 * i as f64).cos();
+        let sin_t: f64 = ((2.0 * PI) / res_per_plane as f64 * i as f64).sin();
+        
+        // rotating Z plane
+        for j in 0..res_per_plane {
+            let cos_r: f64 = ((2.0 * PI) / res_per_plane as f64 * j as f64).cos();
+            let sin_r: f64 = ((2.0 * PI) / res_per_plane as f64 * j as f64).sin();
+            
+            // rotating W plane
+            for k in 0..res_per_plane {
+                let cos_s: f64 = ((2.0 * PI) / res_per_plane as f64 * k as f64).cos();
+                let sin_s: f64 = ((2.0 * PI) / res_per_plane as f64 * k as f64).sin();
 
-    // XW plane
-    for i in 0..res_per_plane {
-        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
-        let pos = Pos4D { x: angle.cos(), y: 0.0, z: 0.0, w: angle.sin() };
-        nodes.push(Node { pos, r: 0.1 });
-    }
+                let x: f64 = r * sin_t * sin_r * cos_s;
+                let z: f64 = r * sin_t * sin_r * sin_s;
+                
+                let y: f64 = r * sin_t * cos_r;
+                let w: f64 = r * cos_t;
 
-    // YZ plane
-    for i in 0..res_per_plane {
-        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
-        let pos = Pos4D { x: 0.0, y: angle.cos(), z: angle.sin(), w: 0.0 };
-        nodes.push(Node { pos, r: 0.1 });
-    }
+                let pos = Pos4D { x, y, z, w };
 
-    // YW plane
-    for i in 0..res_per_plane {
-        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
-        let pos = Pos4D { x: 0.0, y: angle.cos(), z: 0.0, w: angle.sin() };
-        nodes.push(Node { pos, r: 0.1 });
-    }
-
-    // ZW plane
-    for i in 0..res_per_plane {
-        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
-        let pos = Pos4D { x: 0.0, y: 0.0, z: angle.cos(), w: angle.sin() };
-        nodes.push(Node { pos, r: 0.1 });
+                nodes.push( Node { pos, r: 0.1 } );
+            }
+        } 
     }
 
     Object { nodes, edges }
