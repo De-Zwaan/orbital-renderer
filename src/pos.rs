@@ -1,7 +1,39 @@
-use std::{ops, process::Output};
+use std::{ops};
+
 
 pub trait Len {
     fn len(&self) -> f64;
+}
+
+#[derive(Clone, Copy)]
+pub struct Pos1D {
+    pub x: f64,
+}
+
+impl ops::Add for Pos1D {
+    type Output = Pos1D;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let x: f64 = self.x + rhs.x;
+
+        Self::Output { x }
+    }
+}
+
+impl ops::Mul<f64> for Pos1D {
+    type Output = Pos1D;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        let x: f64 = self.x * rhs;
+
+        Self::Output { x }
+    }
+}
+
+impl Len for Pos1D {
+    fn len(&self) -> f64 {
+        self.x
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -69,6 +101,14 @@ impl ops::Mul<f64> for Pos3D {
     }
 }
 
+impl ops::BitXor for Pos3D {
+    type Output = f64;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+}
+
 impl Len for Pos3D {
     fn len(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
@@ -76,26 +116,12 @@ impl Len for Pos3D {
 }
 
 impl Pos3D {
-    pub fn transform_to_screen(&self, screen_matrix: [[f64; 2]; 3]) -> Pos2D {
-        let x: f64 = self.x * screen_matrix[0][0] + self.y * screen_matrix[1][0] + self.z * screen_matrix[2][0];
-        let y: f64 = self.y * screen_matrix[0][1] + self.y * screen_matrix[1][1] + self.z * screen_matrix[2][1];
-
-        Pos2D { x, y }
+    pub fn to_screen_coords(&self, screen_matrix: Matrix2x3, size: PhysicalSize<u32>) -> Pos2D {
+        screen_matrix * *self + Pos2D { x: size.width as f64 / 2.0, y: size.height as f64 / 2.0 }
     }
 
-    pub fn transform_to_pos3d(&self, m: [[f64; 3]; 3]) -> Self {
-        let x: f64 = self.x * m[0][0] + self.y * m[1][0] + self.z * m[2][0];
-        let y: f64 = self.x * m[0][1] + self.y * m[1][1] + self.z * m[2][1];
-        let z: f64 = self.x * m[0][2] + self.y * m[1][2] + self.z * m[2][2];
-       
-        Self { x, y, z } 
-    }
-
-    pub fn rotate_around_y(&self, _axis: [Pos3D; 2], angle: f64) -> Self {
-        // Formulate rotation matrix
-        let rotation_matrix: [[f64; 3]; 3] = [[angle.cos(), 0.0, angle.sin()], [0.0, 1.0, 0.0], [angle.sin(), 0.0, -angle.cos()]];
-        // Rotate in local space
-        self.transform_to_pos3d(rotation_matrix)
+    pub fn rotate_around_y(&self, _axis: [Pos3D; 2], _angle: f64) -> Self {
+        todo!()
     }
 
     // fn _rotate() {
