@@ -1,6 +1,4 @@
 use std::f64::consts::PI;
-
-use rand_distr::{Normal, Distribution};
 use winit::dpi::PhysicalSize;
 
 use crate::{pos::*, sterographic, matrix::*};
@@ -290,13 +288,48 @@ pub fn create_4_sphere(res: i32) -> Object {
     let mut nodes: Vec<Node> = Vec::new();
     let edges: Vec<Edge> = Vec::new();
 
-    let normal = Normal::new(0.0, 1.0).unwrap();
-    
-    for _ in 0..res {
-        let pos = Pos4D { x: normal.sample(&mut rand::thread_rng()), y: normal.sample(&mut rand::thread_rng()), z: normal.sample(&mut rand::thread_rng()), w: normal.sample(&mut rand::thread_rng()) };
-        let scaled_pos = pos * (1.0 / pos.len());
+    let res_per_plane = res / 6;
 
-        nodes.push(Node { pos: scaled_pos, r: 1.0} );
+    // XY plane
+    for i in 0..res_per_plane {
+        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
+        let pos = Pos4D { x: angle.cos(), y: angle.sin(), z: 0.0, w: 0.0 };
+        nodes.push(Node { pos, r: 0.1 });
+    }
+    
+    // XZ plane
+    for i in 0..res_per_plane {
+        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
+        let pos = Pos4D { x: angle.cos(), y: 0.0, z: angle.sin(), w: 0.0 };
+        nodes.push(Node { pos, r: 0.1 });
+    }
+
+    // XW plane
+    for i in 0..res_per_plane {
+        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
+        let pos = Pos4D { x: angle.cos(), y: 0.0, z: 0.0, w: angle.sin() };
+        nodes.push(Node { pos, r: 0.1 });
+    }
+
+    // YZ plane
+    for i in 0..res_per_plane {
+        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
+        let pos = Pos4D { x: 0.0, y: angle.cos(), z: angle.sin(), w: 0.0 };
+        nodes.push(Node { pos, r: 0.1 });
+    }
+
+    // YW plane
+    for i in 0..res_per_plane {
+        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
+        let pos = Pos4D { x: 0.0, y: angle.cos(), z: 0.0, w: angle.sin() };
+        nodes.push(Node { pos, r: 0.1 });
+    }
+
+    // ZW plane
+    for i in 0..res_per_plane {
+        let angle = (2.0 * PI) / res_per_plane as f64 * i as f64;
+        let pos = Pos4D { x: 0.0, y: 0.0, z: angle.cos(), w: angle.sin() };
+        nodes.push(Node { pos, r: 0.1 });
     }
 
     Object { nodes, edges }
