@@ -65,33 +65,15 @@ impl Render for Node {
         let r = 1.0 as i32; //(self.r as f64 * self.pos.w) as i32;
 
         // Draw small cubes around the point
-        for x_off in -r..r {
-            for y_off in -r..r {
-                let x_p = pos.x as i32 + x_off;
-                let y_p = pos.y as i32 + y_off;
-
-                // Calculate the index of the current coordinate
-                if x_p <= size.width as i32 && x_p >= 0 && y_p <= size.height as i32 && y_p >= 0 {
-                    let i = (y_p * size.width as i32) as usize + x_p as usize;
-                    
-                    // Update for every color
-                    if i * 4 < screen.len() && i * 4 > 0 {
-                        for c in 0..3 {
-                            screen[i * 4 + c] = rgba[c];
-                        }
-                    }
-                }
-
-            }
-        }
+        print_point(pos.x as i32, pos.y as i32, r as i32, screen, size, rgba);
     }
 }
 
 impl Render for Edge {
     fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>) {
         // Calculate the screen coordinates of the start and end points
-        let start_point:    Pos2D = sterographic(self.start_node, size);
-        let end_point:      Pos2D = sterographic(self.end_node, size);
+        let start_point:    Pos2D = sterographic(self.start_node,   size);
+        let end_point:      Pos2D = sterographic(self.end_node,     size);
 
         // Calculate vector for line connecting start and end point
         let edge = {
@@ -110,12 +92,39 @@ impl Render for Edge {
             // let slope = (self.start_node.w.max(self.end_node.w) - self.start_node.w.min(self.end_node.w)) / (1.0 / resolution);
             // let r = ((self.r * self.start_node.w.min(self.end_node.w) + slope * i as f64)) as i32; 
 
-            let r = 1.0 as i32;
-            for x_off in -r..=r {
-                for y_off in -r..=r {
-                    let x_p = (edge[0] * i as f64 * resolution) as i32 + x_off + start_point.x as i32;
-                    let y_p = (edge[1] * i as f64 * resolution) as i32 + y_off + start_point.y as i32;
+            let x_p = (edge[0] * i as f64 * resolution) as i32 + start_point.x as i32;
+            let y_p = (edge[1] * i as f64 * resolution) as i32 + start_point.y as i32;
 
+            let r = 1.0 as i32;
+            print_point(x_p, y_p, r, screen, size, rgba);
+        }
+    }
+}
+
+fn print_point(x: i32, y: i32, r: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]) {
+    for x_off in -r..=r {
+        for y_off in -r..=r {
+            let x_p = x + x_off;
+            let y_p = y + y_off;
+
+            print_coord_in_pixelbuffer(x_p, y_p, screen, size, color)
+        }
+    }
+}
+
+fn print_coord_in_pixelbuffer(x : i32, y: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]) {
+    // Calculate the index of the current coordinate
+    if x <= size.width as i32 && x >= 0 && y <= size.height as i32 && y >= 0 {
+        let i = (y * size.width as i32) as usize + x as usize;
+    
+        // Update for every color
+        if i * 4 < screen.len() && i * 4 > 0 {
+            for c in 0..3 {
+                screen[i * 4 + c] = color[c];
+            }
+        }
+    }
+}
 
 pub fn empty() -> Object {
     let nodes: Vec<Node> = Vec::new();
