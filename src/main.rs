@@ -7,13 +7,15 @@ use matrix::*;
 use pos::*;
 
 use pixels::{SurfaceTexture, PixelsBuilder, Error};
-use shapes::{Object, create_4_cube, create_3_sphere, create_3_cube, create_4_sphere, Edge, Node};
+#[allow(unused_imports)]
+use shapes::{Object, create_4_cube, create_3_sphere, create_3_cube, create_4_sphere, Edge, Node, empty};
+
 use winit::{event_loop::EventLoop, window::WindowBuilder, event::{Event, WindowEvent}, dpi::{LogicalSize, PhysicalSize}, platform::windows::WindowBuilderExtWindows};
 
 const WIDTH: u32 = 500;
 const HEIGHT: u32 = 500;
 
-const SCALE: f64 = 150.0;
+const SCALE: f64 = 100.0;
 
 fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
@@ -37,10 +39,11 @@ fn main() -> Result<(), Error> {
 
     let mut t: u64 = 0;
 
-    // let shape = create_3_cube();
-    // let shape = create_4_cube();
+    // let shape = create_3_cube(1.0);
+    // let shape = create_4_cube(1.0);
     // let shape = create_3_sphere(1000);
-    let shape = create_4_sphere(1000);
+    let shape = create_4_sphere(1600, 1.8);
+    // let shape = empty();
 
     event_loop.run(move | event, _, control_flow | {
         control_flow.set_poll();
