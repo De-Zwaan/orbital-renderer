@@ -402,6 +402,7 @@ impl ops::Add for Pos4D {
     }
 }
 
+
 impl ops::Sub for Pos4D {
     type Output = Pos4D;
 
@@ -415,7 +416,6 @@ impl ops::Sub for Pos4D {
         Self::Output { x, y, z, w }
     }
 }
-
 
 impl ops::Mul<f64> for Pos4D {
     type Output = Pos4D;
