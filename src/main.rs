@@ -8,9 +8,12 @@ use pos::*;
 
 use pixels::{SurfaceTexture, PixelsBuilder, Error};
 #[allow(unused_imports)]
-use shapes::{Object, create_4_cube, create_3_sphere, create_3_cube, create_4_sphere, Edge, Node, empty};
+use shapes::{Object, create_4_cube, create_3_sphere, create_3_cube, create_4_sphere, empty};
 
-use winit::{event_loop::EventLoop, window::WindowBuilder, event::{Event, WindowEvent}, dpi::{LogicalSize, PhysicalSize}, platform::windows::WindowBuilderExtWindows};
+use winit::{event_loop::EventLoop, window::WindowBuilder, event::{Event, WindowEvent}, dpi::{LogicalSize, PhysicalSize}}
+
+#[cfg(target_os = "windows")]
+use winit::platform::windows::WindowBuilderExtWindows;
 
 const WIDTH: u32 = 500;
 const HEIGHT: u32 = 500;
@@ -20,21 +23,23 @@ const SCALE: f64 = 100.0;
 fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
 
+    // Initialise the window
     let window = WindowBuilder::new()
         .with_title("Spinny Spinny")
         // .with_decorations(false)
         // .with_transparent(true)
         .with_always_on_top(true)
-        .with_drag_and_drop(false)
         .with_inner_size(LogicalSize::new(WIDTH, HEIGHT))
         .with_min_inner_size(LogicalSize::new(100, 100))
         .with_resizable(false)
         .build(&event_loop)
         .unwrap();
 
+    // Create a surface texture to render to
     let surface_texture = SurfaceTexture::new(window.inner_size().width, window.inner_size().height, &window);
     
-    let mut pixels = PixelsBuilder::new(WIDTH, HEIGHT, surface_texture)
+    // Create a pixelarray
+    let mut pixels: pixels::Pixels = PixelsBuilder::new(WIDTH, HEIGHT, surface_texture)
         .build()?;
 
     let mut t: u64 = 0;

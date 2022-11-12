@@ -402,6 +402,21 @@ impl ops::Add for Pos4D {
     }
 }
 
+impl ops::Sub for Pos4D {
+    type Output = Pos4D;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let x: f64 = rhs.x - self.x;
+        let y: f64 = rhs.y - self.y;
+        let z: f64 = rhs.z - self.z;
+        let w: f64 = rhs.w - self.w;
+
+        
+        Self::Output { x, y, z, w }
+    }
+}
+
+
 impl ops::Mul<f64> for Pos4D {
     type Output = Pos4D;
 
@@ -415,16 +430,11 @@ impl ops::Mul<f64> for Pos4D {
     }
 }
 
-impl ops::Sub for Pos4D {
+impl ops::Div<f64> for Pos4D {
     type Output = Pos4D;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        let x: f64 = self.x - rhs.x;
-        let y: f64 = self.y - rhs.y;
-        let z: f64 = self.z - rhs.z;
-        let w: f64 = self.w - rhs.w;
-
-        Self::Output { x, y, z, w }
+    fn div(self, rhs: f64) -> Self::Output {
+        self * (1.0 / rhs)
     }
 }
 

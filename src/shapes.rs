@@ -286,10 +286,6 @@ pub fn create_3_sphere(res: i32) -> Object {
         nodes.push(Node { pos: Pos4D { x, y, z, w: 0.0 }, r: 1.0 })
     }
 
-    // for (i, _) in nodes.iter().enumerate().step_by(2) {
-    //     edges.push(Edge { start_node: nodes[i].pos, end_node: nodes[i + 1].pos, r: 1.0 });
-    // }
-
     Object { nodes, edges }
 }
 
