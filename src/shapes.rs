@@ -169,6 +169,8 @@ impl Transform<Matrix4x4, Pos4D> for Edge {
 
 trait Render {
     fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>);
+    fn print_point(x: i32, y: i32, r: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]);
+}
 }
 
 impl Render for Node {
@@ -190,7 +192,18 @@ impl Render for Node {
 
         // Draw small cubes around the point
         if r < 0.4 {return};
-        print_point(pos.x as i32, pos.y as i32, r as i32, screen, size, rgba);
+        Self::print_point(pos.x as i32, pos.y as i32, r as i32, screen, size, rgba);
+    }
+
+    fn print_point(x: i32, y: i32, r: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]) {
+        for x_off in -r..=r {
+            for y_off in -r..=r {
+                let x_p = x + x_off;
+                let y_p = y + y_off;
+    
+                print_coord_in_pixelbuffer(x_p, y_p, screen, size, color)
+            }
+        }
     }
 }
 
@@ -220,19 +233,18 @@ impl Render for Edge {
             let x_p = (edge[0] * i as f64 * resolution) as i32 + start_point.x as i32;
             let y_p = (edge[1] * i as f64 * resolution) as i32 + start_point.y as i32;
 
-            let r = 1.0 as i32;
-            print_point(x_p, y_p, r, screen, size, rgba);
+            Self::print_point(x_p, y_p, r, screen, size, rgba);
         }
     }
-}
 
-fn print_point(x: i32, y: i32, r: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]) {
-    for x_off in -r..=r {
-        for y_off in -r..=r {
-            let x_p = x + x_off;
-            let y_p = y + y_off;
-
-            print_coord_in_pixelbuffer(x_p, y_p, screen, size, color)
+    fn print_point(x: i32, y: i32, r: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]) {
+        for x_off in -r..=r {
+            for y_off in -r..=r {
+                let x_p = x + x_off;
+                let y_p = y + y_off;
+    
+                print_coord_in_pixelbuffer(x_p, y_p, screen, size, color)
+            }
         }
     }
 }
