@@ -4,47 +4,42 @@ use winit::dpi::PhysicalSize;
 
 use crate::matrix::{Matrix2x3, Matrix4x4};
 
+use crate::RotationPlane::*;
+
 #[derive(Clone, Copy)]
-pub enum Axis {
-    X,
-    Y,
-    Z,
-    W,
+pub enum RotationPlane {
+    XY,
+    XZ,
+    XW,
+    YX,
+    YZ,
+    YW,
+    ZX,
+    ZY,
+    ZW,
+    WX,
+    WY,
+    WZ,
 }
 
-impl Axis {
-    pub fn get_rot_mat(a: Axis, b: Axis, angle: f64) -> Matrix4x4 {
+impl RotationPlane {
+    pub fn get_rot_mat(axis: RotationPlane, angle: f64) -> Matrix4x4 {
         let cos: f64 = angle.cos();
         let sin: f64 = angle.sin();
         
-        match a {
-            Axis::X => match b {
-                Axis::X => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-                Axis::Y => Matrix4x4::new([[cos, sin, 0.0, 0.0], [-sin, cos, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-                Axis::Z => Matrix4x4::new([[cos, 0.0, sin, 0.0], [0.0, 1.0, 0.0, 0.0], [-sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-                Axis::W => Matrix4x4::new([[cos, 0.0, 0.0, sin], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [-sin, 0.0, 0.0, cos]]),
-            },
-            
-            Axis::Y => match b {
-                Axis::X => Matrix4x4::new([[cos, -sin, 0.0, 0.0], [sin, cos, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-                Axis::Y => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-                Axis::Z => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, sin, 0.0], [0.0, -sin, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-                Axis::W => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, sin], [0.0, 0.0, 1.0, 0.0], [0.0, -sin, 0.0, cos]]),
-            },
-            
-            Axis::Z => match b {
-                Axis::X => Matrix4x4::new([[cos, 0.0, -sin, 0.0], [0.0, 1.0, 0.0, 0.0], [sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-                Axis::Y => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, -sin, 0.0], [0.0, sin, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-                Axis::Z => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-                Axis::W => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, sin], [0.0, 0.0, -sin, cos]]),
-            },
-            
-            Axis::W => match b {
-                Axis::X => Matrix4x4::new([[cos, 0.0, 0.0, -sin], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [sin, 0.0, 0.0, cos]]),
-                Axis::Y => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, -sin], [0.0, 0.0, 1.0, 0.0], [0.0, sin, 0.0, cos]]),
-                Axis::Z => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, -sin], [0.0, 0.0, sin, cos]]),
-                Axis::W => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-            }, 
+        match axis {
+            XY => Matrix4x4::new([[cos, sin, 0.0, 0.0], [-sin, cos, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            XZ => Matrix4x4::new([[cos, 0.0, sin, 0.0], [0.0, 1.0, 0.0, 0.0], [-sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            XW => Matrix4x4::new([[cos, 0.0, 0.0, sin], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [-sin, 0.0, 0.0, cos]]),
+            YX => Matrix4x4::new([[cos, -sin, 0.0, 0.0], [sin, cos, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            YZ => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, sin, 0.0], [0.0, -sin, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            YW => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, sin], [0.0, 0.0, 1.0, 0.0], [0.0, -sin, 0.0, cos]]),
+            ZX => Matrix4x4::new([[cos, 0.0, -sin, 0.0], [0.0, 1.0, 0.0, 0.0], [sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            ZY => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, -sin, 0.0], [0.0, sin, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            ZW => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, sin], [0.0, 0.0, -sin, cos]]),
+            WX => Matrix4x4::new([[cos, 0.0, 0.0, -sin], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [sin, 0.0, 0.0, cos]]),
+            WY => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, -sin], [0.0, 0.0, 1.0, 0.0], [0.0, sin, 0.0, cos]]),
+            WZ => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, -sin], [0.0, 0.0, sin, cos]]), 
         }
     }
 }
