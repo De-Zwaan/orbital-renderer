@@ -191,7 +191,8 @@ impl Render for Node {
         let r = scale(self.pos) * self.r;
 
         // Set the color of the points
-        let rgba = self.color.get_rgba();
+        let mut rgba = self.color.get_rgba();
+        rgba[2] = (50.0 * (self.pos.w + 2.5)) as u8;
 
         // Draw small cubes around the point
         if r < 0.4 {return};
@@ -231,7 +232,7 @@ impl Render for Edge {
         // Set 1 / the amount of points that compose an edge
         let resolution: f64 = 0.01;
 
-        let rgba = self.color.get_rgba();
+        let mut rgba = self.color.get_rgba();
 
         for i in 0..=((1.0/resolution) as i32) {
             let x_p = (edge[0] * i as f64 * resolution) as i32 + start_point.x as i32;
@@ -239,6 +240,9 @@ impl Render for Edge {
 
             // Interpolate the radius of the points making up the edges
             let r = (((end_point_r - start_point_r) * i as f64 * resolution) + start_point_r) as i32;
+
+            rgba[2] = (50.0 * (((self.end_node.w - self.start_node.w) * i as f64 * resolution + self.start_node.w) + 2.5)) as u8;
+
             Self::print_point(x_p, y_p, r, screen, size, rgba);
         }
     }
