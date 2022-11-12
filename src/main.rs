@@ -3,8 +3,6 @@ pub mod pos;
 pub mod matrix;
 pub mod shapes;
 
-use std::f64::consts::PI;
-
 use matrix::*;
 use pos::*;
 
@@ -15,7 +13,7 @@ use winit::{event_loop::EventLoop, window::WindowBuilder, event::{Event, WindowE
 const WIDTH: u32 = 500;
 const HEIGHT: u32 = 500;
 
-const SCALE: f64 = 80.0;
+const SCALE: f64 = 150.0;
 
 fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
@@ -39,9 +37,10 @@ fn main() -> Result<(), Error> {
 
     let mut t: u64 = 0;
 
-    // let cube = create_3_cube();
-    let hypercube: Object = create_4_cube();
-    // let sphere = create_4_sphere(1000);
+    // let shape = create_3_cube();
+    // let shape = create_4_cube();
+    // let shape = create_3_sphere(1000);
+    let shape = create_4_sphere(1000);
 
     event_loop.run(move | event, _, control_flow | {
         control_flow.set_poll();
@@ -75,8 +74,7 @@ fn main() -> Result<(), Error> {
                 }   
 
                 // Draw objects                
-                // sphere.draw(screen, window.inner_size(), t);
-                hypercube.draw(screen, window.inner_size(), t);
+                shape.draw(screen, window.inner_size(), t);
 
                 // Render result
                 if pixels.render().map_err(|e| println!("pixels.render() failed: {}", e)).is_err() {
@@ -107,9 +105,9 @@ static SCREEN_MATRIX_3D: Matrix2x3 = Matrix2x3 {
 fn sterographic(pos: Pos4D, size: PhysicalSize<u32>) -> Pos2D {
     let pos_4d = pos * (1.0 / pos.len());
     let pos_3d = Pos3D {
-        x: pos_4d.x / (1.0 - pos_4d.w), 
-        y: pos_4d.y / (1.0 - pos_4d.w), 
-        z: pos_4d.z / (1.0 - pos_4d.w),
+        x: pos_4d.x / (1.0 + pos_4d.w), 
+        y: pos_4d.y / (1.0 + pos_4d.w), 
+        z: pos_4d.z / (1.0 + pos_4d.w),
     };
     SCREEN_MATRIX_3D * pos_3d * SCALE + Pos2D { x: size.width as f64 / 2.0, y: size.height as f64 / 2.0 }
 }
