@@ -63,25 +63,106 @@ impl Object {
         let cos = angle.cos();
         let sin = angle.sin();
 
-        // let rotation_xz_matrix = Matrix4x4::new([[cos, 0.0, sin, 0.0], [0.0, 1.0, 0.0, 0.0], [-sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]);
-        // let rotation_zw_matrix = Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, sin], [0.0, 0.0, -sin, cos]]);
-        let rotation_yw_matrix = Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, sin], [0.0, 0.0, 1.0, 0.0], [0.0, -sin, 0.0, cos]]);
-        
-        let rotation_matrix = rotation_yw_matrix;
+        for (_, edge) in rotated.edges.iter().enumerate() {
+            edge.draw(screen, size);
+        }
 
+        for (_, node) in rotated.nodes.iter().enumerate() {
+            node.draw(screen, size);
+        }
+    }
+}
+
+trait Transform<T, V> where Self: Sized {
+    fn rotate(&self, rotation_matrix: T) -> Self;
+    fn transform(&self, vector: V) -> Self;
+    fn scale(&self, scale: f64) -> Self;
+}
+
+impl Transform<Matrix4x4, Pos4D> for Object {
+    fn rotate(&self, rotation_matrix: Matrix4x4) -> Self {
+        let mut edges: Vec<Edge> = Vec::new();
         // Loop over all edges
         for (_i, edge) in self.edges.iter().enumerate() {
-            // Transform the start and end_node 
-            let start_node = rotation_matrix * edge.start_node;
-            let end_node = rotation_matrix * edge.end_node;
-
-            Edge {start_node, end_node, r: edge.r}.draw(screen, size);
+            edges.push(edge.rotate(rotation_matrix));
         }
-
+        
+        let mut nodes: Vec<Node> = Vec::new();
+        // Loop over all nodes
         for (_i, node) in self.nodes.iter().enumerate() {
-            let pos: Pos4D = rotation_matrix * node.pos;
-            Node {pos: pos, r: node.r}.draw(screen, size);
+            nodes.push(node.rotate(rotation_matrix));
         }
+        
+        Self { nodes, edges }
+    }
+
+    fn transform(&self, vector: Pos4D) -> Self {
+        let mut edges: Vec<Edge> = Vec::new();
+        // Loop over all edges
+        for (_i, edge) in self.edges.iter().enumerate() {
+            edges.push(edge.transform(vector));
+        }
+        
+        let mut nodes: Vec<Node> = Vec::new();
+        // Loop over all nodes
+        for (_i, node) in self.nodes.iter().enumerate() {
+            nodes.push(node.transform(vector));
+        }
+        
+        Self { nodes, edges }
+    }
+
+    fn scale(&self, scale: f64) -> Self {
+        let mut edges: Vec<Edge> = Vec::new();
+        // Loop over all edges
+        for (_i, edge) in self.edges.iter().enumerate() {
+            edges.push(edge.scale(scale));
+        }
+        
+        let mut nodes: Vec<Node> = Vec::new();
+        // Loop over all nodes
+        for (_i, node) in self.nodes.iter().enumerate() {
+            nodes.push(node.scale(scale));
+        }
+        
+        Self { nodes, edges }
+    }
+}
+
+impl Transform<Matrix4x4, Pos4D> for Node {
+    fn rotate(&self, rotation_matrix: Matrix4x4) -> Self {
+        Self { pos: rotation_matrix * self.pos, r: self.r, color: self.color }
+    }
+    
+    fn transform(&self, vector: Pos4D) -> Self {
+        Self { pos: self.pos + vector, r: self.r, color: self.color }
+    }
+
+    fn scale(&self, scale: f64) -> Self {
+        Self { pos: self.pos * scale, r: self.r, color: self.color }
+    }
+}
+
+impl Transform<Matrix4x4, Pos4D> for Edge {
+    fn rotate(&self, rotation_matrix: Matrix4x4) -> Self {
+        let start_node: Pos4D = rotation_matrix * self.start_node;
+        let end_node  : Pos4D = rotation_matrix * self.end_node; 
+
+        Self { start_node, end_node, r: self.r, color: self.color }
+    }
+    
+    fn transform(&self, vector: Pos4D) -> Self {
+        let start_node: Pos4D = self.start_node + vector;
+        let end_node  : Pos4D = self.end_node + vector;
+
+        Self { start_node, end_node, r: self.r, color: self.color }
+    }
+
+    fn scale(&self, scale: f64) -> Self {
+        let start_node: Pos4D = self.start_node * scale;
+        let end_node  : Pos4D = self.end_node * scale;
+
+        Self { start_node, end_node, r: self.r, color: self.color }
     }
 }
 
