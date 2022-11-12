@@ -30,9 +30,10 @@ impl Object {
         let sin = angle.sin();
 
         // let rotation_xz_matrix = Matrix4x4::new([[cos, 0.0, sin, 0.0], [0.0, 1.0, 0.0, 0.0], [-sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]);
-        let rotation_zw_matrix = Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, sin], [0.0, 0.0, -sin, cos]]);
+        // let rotation_zw_matrix = Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, sin], [0.0, 0.0, -sin, cos]]);
+        let rotation_yw_matrix = Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, sin], [0.0, 0.0, 1.0, 0.0], [0.0, -sin, 0.0, cos]]);
         
-        let rotation_matrix = rotation_zw_matrix;
+        let rotation_matrix = rotation_yw_matrix;
 
         // Loop over all edges
         for (_i, edge) in self.edges.iter().enumerate() {
@@ -56,15 +57,23 @@ trait Render {
 
 impl Render for Node {
     fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>) {
+        // if self.pos.w != self.pos.w.clamp(0.9, 1.1) {return};
+
         // Transform the Node to screen coordinates
         let pos: Pos2D = sterographic(self.pos, size);
 
-        // Set the color of the points
-        let rgba = [0xff, 0xaa, 0xff, 0xff];
+        // Make the color dependant on the angle to the camera
+        let pos_3d: Pos3D       = Pos3D { x: self.pos.x, y: self.pos.y, z: self.pos.z };
+        let to_camera: Pos3D    = Pos3D { x: 1.0,        y: 1.0,        z: 1.0        };
+        
+        // The smaller the angle to the camera, the larger the nodes are when drawn to the screen
+        let r = (to_camera * (1.0 / to_camera.len())) ^ (pos_3d * (1.0 / pos_3d.len())) * 2.0;
 
-        let r = 1.0 as i32; //(self.r as f64 * self.pos.w) as i32;
+        // Set the color of the points
+        let rgba = [0xfa, 0xaa, 0x00, 0xff];
 
         // Draw small cubes around the point
+        if r < 0.4 {return};
         print_point(pos.x as i32, pos.y as i32, r as i32, screen, size, rgba);
     }
 }
