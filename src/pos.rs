@@ -2,7 +2,52 @@ use std::{ops};
 
 use winit::dpi::PhysicalSize;
 
-use crate::matrix::{Matrix2x3};
+use crate::matrix::{Matrix2x3, Matrix4x4};
+
+#[derive(Clone, Copy)]
+pub enum Axis {
+    X,
+    Y,
+    Z,
+    W,
+}
+
+impl Axis {
+    pub fn get_rot_mat(a: Axis, b: Axis, angle: f64) -> Matrix4x4 {
+        let cos: f64 = angle.cos();
+        let sin: f64 = angle.sin();
+        
+        match a {
+            Axis::X => match b {
+                Axis::X => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+                Axis::Y => Matrix4x4::new([[cos, sin, 0.0, 0.0], [-sin, cos, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+                Axis::Z => Matrix4x4::new([[cos, 0.0, sin, 0.0], [0.0, 1.0, 0.0, 0.0], [-sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+                Axis::W => Matrix4x4::new([[cos, 0.0, 0.0, sin], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [-sin, 0.0, 0.0, cos]]),
+            },
+            
+            Axis::Y => match b {
+                Axis::X => Matrix4x4::new([[cos, -sin, 0.0, 0.0], [sin, cos, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+                Axis::Y => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+                Axis::Z => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, sin, 0.0], [0.0, -sin, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+                Axis::W => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, sin], [0.0, 0.0, 1.0, 0.0], [0.0, -sin, 0.0, cos]]),
+            },
+            
+            Axis::Z => match b {
+                Axis::X => Matrix4x4::new([[cos, 0.0, -sin, 0.0], [0.0, 1.0, 0.0, 0.0], [sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+                Axis::Y => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, -sin, 0.0], [0.0, sin, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+                Axis::Z => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+                Axis::W => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, sin], [0.0, 0.0, -sin, cos]]),
+            },
+            
+            Axis::W => match b {
+                Axis::X => Matrix4x4::new([[cos, 0.0, 0.0, -sin], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [sin, 0.0, 0.0, cos]]),
+                Axis::Y => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, -sin], [0.0, 0.0, 1.0, 0.0], [0.0, sin, 0.0, cos]]),
+                Axis::Z => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, -sin], [0.0, 0.0, sin, cos]]),
+                Axis::W => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            }, 
+        }
+    }
+}
 
 pub trait Len {
     fn len(&self) -> f64;
@@ -122,47 +167,6 @@ impl Pos3D {
     pub fn to_screen_coords(&self, screen_matrix: Matrix2x3, size: PhysicalSize<u32>) -> Pos2D {
         screen_matrix * *self + Pos2D { x: size.width as f64 / 2.0, y: size.height as f64 / 2.0 }
     }
-
-    pub fn rotate_around_y(&self, _axis: [Pos3D; 2], _angle: f64) -> Self {
-        todo!()
-    }
-
-    // fn _rotate() {
-    //     // To test, set axis as y axis
-    //     // Todo: take axis into account
-
-    //     // Transform node to local space
-    //     // Such that the axis is transformed to be the x-axis, and the other axis 
-
-    //     // Calculate the new y axis
-    //     let v_axis = {
-    //         let x = _axis[1].x - _axis[0].x;
-    //         let y = _axis[1].y - _axis[0].y;
-    //         let z = _axis[1].z - _axis[0].z;
-
-    //         let length = (x.powi(2) + y.powi(2) + z.powi(2)).sqrt(); 
-    //         [
-    //             x / length,
-    //             y / length,
-    //             z / length,
-    //         ]
-    //     };
-
-    //     // Formulate matrix transformation
-    //     let a_matrix: [[f64; 3]; 3] = [[,,], [v_axis[0], v_axis[1], v_axis[2]], [,,]]; 
-    //     // Apply transformation
-    //     let local = self._transform_to_pos3d(a_matrix);
-
-    //     // Formulate rotation matrix
-    //     let rotation_matrix: [[f64; 3]; 3] = [[angle.cos(), 0.0, angle.sin()], [0.0, 1.0, 0.0], [angle.sin(), 0.0, -angle.cos()]];
-    //     // Rotate in local space
-    //     let rotated = local._transform_to_pos3d(rotation_matrix);
-
-    //     // Transform node back to global space
-    //     // use inverse matrix of a_matrix
-    //     let a_inverse_matrix = a_matrix.inverse();
-    //     rotated._transform_to_pos3d(a_inverse_matrix)
-    // }
 }
 
 trait Transformation {

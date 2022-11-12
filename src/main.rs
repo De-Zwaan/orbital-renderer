@@ -93,7 +93,7 @@ fn main() -> Result<(), Error> {
 
 static SCREEN_MATRIX_3D: Matrix2x3 = Matrix2x3 {
     x: Pos3D { x:  0.866, y:  0.0, z: -0.866 },
-    y: Pos3D { x: -0.5,   y:  1.0, z: -0.5   },
+    y: Pos3D { x: -0.5,   y:  -1.0, z: -0.5  },
 };
 
 // fn perspective(pos: Pos4D, size: PhysicalSize<u32>) -> Pos2D {

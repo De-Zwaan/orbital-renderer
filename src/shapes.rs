@@ -3,6 +3,7 @@ use winit::dpi::PhysicalSize;
 
 use crate::{pos::*, sterographic, matrix::*};
 use crate::shapes::Color::*;
+use crate::pos::Axis::*;
 
 #[derive(Clone, Copy)]
 pub enum Color {
@@ -57,11 +58,11 @@ pub struct Edge {
 
 impl Object {
     pub fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, t: u64) {
-        let angle = t as f64 * PI / 256.0;
+        let angle: f64 = t as f64 * PI / 256.0;
 
-        // Create a rotation_matrix using the rotation of the cube
-        let cos = angle.cos();
-        let sin = angle.sin();
+        let rotation_matrix: Matrix4x4 = Axis::get_rot_mat(W, Z, angle);
+
+        let rotated: Object = self.rotate(rotation_matrix);
 
         for (_, edge) in rotated.edges.iter().enumerate() {
             edge.draw(screen, size);
