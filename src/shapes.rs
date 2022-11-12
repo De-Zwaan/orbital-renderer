@@ -2,6 +2,38 @@ use std::f64::consts::PI;
 use winit::dpi::PhysicalSize;
 
 use crate::{pos::*, sterographic, matrix::*};
+use crate::shapes::Color::*;
+
+#[derive(Clone, Copy)]
+pub enum Color {
+    Red,
+    Orange,
+    Yellow,
+    Green,
+    Blue,
+    Purple,
+    White, 
+    Black,
+    RGBA(u8, u8, u8, u8),
+    RGB(u8, u8, u8),
+}
+
+impl Color {
+    fn get_rgba(&self) -> [u8; 4] {
+        match self {
+            Color::Red      => [0xff, 0x00, 0x00, 0xff],
+            Color::Orange   => [0xff, 0xaa, 0x00, 0xff],
+            Color::Yellow   => [0xaa, 0xaa, 0x00, 0xff],
+            Color::Green    => [0x00, 0xff, 0x00, 0xff],
+            Color::Blue     => [0x00, 0x00, 0xff, 0xff],
+            Color::Purple   => [0xaa, 0x00, 0xaa, 0xff],
+            Color::White    => [0xff, 0xff, 0xff, 0xff],
+            Color::Black    => [0x00, 0x00, 0x00, 0xff],
+            Color::RGBA(r, g, b, a)    => [*r, *g, *b, *a],
+            Color::RGB (r, g, b)            => [*r, *g, *b, 0xff],
+        }
+    }
+}
 
 pub struct Object {
     pub nodes: Vec<Node>,
@@ -12,6 +44,7 @@ pub struct Object {
 pub struct Node {
     pub pos: Pos4D,
     pub r: f64,
+    pub color: Color,
 }
 
 #[derive(Clone, Copy)]
@@ -19,6 +52,7 @@ pub struct Edge {
     pub start_node: Pos4D,
     pub end_node: Pos4D,
     pub r: f64,
+    pub color: Color,
 }
 
 impl Object {
@@ -70,7 +104,7 @@ impl Render for Node {
         let r = (to_camera * (1.0 / to_camera.len())) ^ (pos_3d * (1.0 / pos_3d.len())) * 2.0;
 
         // Set the color of the points
-        let rgba = [0xfa, 0xaa, 0x00, 0xff];
+        let rgba = self.color.get_rgba();
 
         // Draw small cubes around the point
         if r < 0.4 {return};
@@ -95,7 +129,7 @@ impl Render for Edge {
         // Set 1 / the amount of points that compose an edge
         let resolution: f64 = 0.01;
 
-        let rgba = [0xff, 0x00, 0xbb, 0xff];
+        let rgba = self.color.get_rgba();
 
         for i in 0..=((1.0/resolution) as i32) {
             // let slope = (self.start_node.w.max(self.end_node.w) - self.start_node.w.min(self.end_node.w)) / (1.0 / resolution);
@@ -136,7 +170,14 @@ fn print_coord_in_pixelbuffer(x : i32, y: i32, screen: &mut [u8], size: Physical
 }
 
 pub fn empty() -> Object {
-    let nodes: Vec<Node> = Vec::new();
+    let nodes: Vec<Node> = vec![
+        Node { pos: Pos4D { x: 0.0, y: 0.0, z: 0.0, w: 0.0 }, r: 0.1, color: White   },
+        Node { pos: Pos4D { x: 1.0, y: 0.0, z: 0.0, w: 0.0 }, r: 0.1, color: Red     },
+        Node { pos: Pos4D { x: 0.0, y: 1.0, z: 0.0, w: 0.0 }, r: 0.1, color: Green   },
+        Node { pos: Pos4D { x: 0.0, y: 0.0, z: 1.0, w: 0.0 }, r: 0.1, color: Blue    },
+        Node { pos: Pos4D { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }, r: 0.1, color: Purple  },
+    ];
+
     let edges: Vec<Edge> = Vec::new();
 
     Object { nodes, edges }
@@ -156,31 +197,31 @@ pub fn create_3_cube(r: f64) -> Object {
 
     Object {
         nodes: vec![
-            Node { pos: points[00], r: 0.1 },
-            Node { pos: points[01], r: 0.1 },
-            Node { pos: points[02], r: 0.1 },
-            Node { pos: points[03], r: 0.1 },
-            Node { pos: points[04], r: 0.1 },
-            Node { pos: points[05], r: 0.1 },
-            Node { pos: points[06], r: 0.1 },
-            Node { pos: points[07], r: 0.1 },
+            Node { pos: points[00], r: 0.1, color: Yellow },
+            Node { pos: points[01], r: 0.1, color: Yellow },
+            Node { pos: points[02], r: 0.1, color: Yellow },
+            Node { pos: points[03], r: 0.1, color: Yellow },
+            Node { pos: points[04], r: 0.1, color: Yellow },
+            Node { pos: points[05], r: 0.1, color: Yellow },
+            Node { pos: points[06], r: 0.1, color: Yellow },
+            Node { pos: points[07], r: 0.1, color: Yellow },
         ],
         edges: vec![
-            Edge {start_node: points[00], end_node: points[01], r: 0.01},
-            Edge {start_node: points[00], end_node: points[02], r: 0.01},
-            Edge {start_node: points[00], end_node: points[04], r: 0.01},
+            Edge {start_node: points[00], end_node: points[01], r: 0.01, color: Purple},
+            Edge {start_node: points[00], end_node: points[02], r: 0.01, color: Purple},
+            Edge {start_node: points[00], end_node: points[04], r: 0.01, color: Purple},
 
-            Edge {start_node: points[03], end_node: points[01], r: 0.01},
-            Edge {start_node: points[03], end_node: points[02], r: 0.01},
-            Edge {start_node: points[03], end_node: points[07], r: 0.01},
+            Edge {start_node: points[03], end_node: points[01], r: 0.01, color: Purple},
+            Edge {start_node: points[03], end_node: points[02], r: 0.01, color: Purple},
+            Edge {start_node: points[03], end_node: points[07], r: 0.01, color: Purple},
 
-            Edge {start_node: points[05], end_node: points[01], r: 0.01},
-            Edge {start_node: points[05], end_node: points[04], r: 0.01},
-            Edge {start_node: points[05], end_node: points[07], r: 0.01},
+            Edge {start_node: points[05], end_node: points[01], r: 0.01, color: Purple},
+            Edge {start_node: points[05], end_node: points[04], r: 0.01, color: Purple},
+            Edge {start_node: points[05], end_node: points[07], r: 0.01, color: Purple},
 
-            Edge {start_node: points[06], end_node: points[02], r: 0.01},
-            Edge {start_node: points[06], end_node: points[04], r: 0.01},
-            Edge {start_node: points[06], end_node: points[07], r: 0.01},
+            Edge {start_node: points[06], end_node: points[02], r: 0.01, color: Purple},
+            Edge {start_node: points[06], end_node: points[04], r: 0.01, color: Purple},
+            Edge {start_node: points[06], end_node: points[07], r: 0.01, color: Purple},
         ],
     }
 }
@@ -207,63 +248,63 @@ pub fn create_4_cube(r: f64) -> Object {
 
     Object {
         nodes: vec![
-            Node { pos: points[00], r: 0.1 },
-            Node { pos: points[01], r: 0.1 },
-            Node { pos: points[02], r: 0.1 },
-            Node { pos: points[03], r: 0.1 },
-            Node { pos: points[04], r: 0.1 },
-            Node { pos: points[05], r: 0.1 },
-            Node { pos: points[06], r: 0.1 },
-            Node { pos: points[07], r: 0.1 },
-            Node { pos: points[08], r: 0.1 },
-            Node { pos: points[09], r: 0.1 },
-            Node { pos: points[10], r: 0.1 },
-            Node { pos: points[11], r: 0.1 },
-            Node { pos: points[12], r: 0.1 },
-            Node { pos: points[13], r: 0.1 },
-            Node { pos: points[14], r: 0.1 },
-            Node { pos: points[15], r: 0.1 },
+            Node { pos: points[00], r: 0.1, color: White },
+            Node { pos: points[01], r: 0.1, color: White },
+            Node { pos: points[02], r: 0.1, color: White },
+            Node { pos: points[03], r: 0.1, color: White },
+            Node { pos: points[04], r: 0.1, color: White },
+            Node { pos: points[05], r: 0.1, color: White },
+            Node { pos: points[06], r: 0.1, color: White },
+            Node { pos: points[07], r: 0.1, color: White },
+            Node { pos: points[08], r: 0.1, color: White },
+            Node { pos: points[09], r: 0.1, color: White },
+            Node { pos: points[10], r: 0.1, color: White },
+            Node { pos: points[11], r: 0.1, color: White },
+            Node { pos: points[12], r: 0.1, color: White },
+            Node { pos: points[13], r: 0.1, color: White },
+            Node { pos: points[14], r: 0.1, color: White },
+            Node { pos: points[15], r: 0.1, color: White },
         ],
         edges: vec![
-            Edge {start_node: points[00], end_node: points[01], r: 0.01},
-            Edge {start_node: points[00], end_node: points[02], r: 0.01},
-            Edge {start_node: points[00], end_node: points[04], r: 0.01},
-            Edge {start_node: points[00], end_node: points[08], r: 0.01},
+            Edge {start_node: points[00], end_node: points[01], r: 0.01, color: Purple},
+            Edge {start_node: points[00], end_node: points[02], r: 0.01, color: Purple},
+            Edge {start_node: points[00], end_node: points[04], r: 0.01, color: Purple},
+            Edge {start_node: points[00], end_node: points[08], r: 0.01, color: Purple},
 
-            Edge {start_node: points[03], end_node: points[01], r: 0.01},
-            Edge {start_node: points[03], end_node: points[02], r: 0.01},
-            Edge {start_node: points[03], end_node: points[07], r: 0.01},
-            Edge {start_node: points[03], end_node: points[11], r: 0.01},
+            Edge {start_node: points[03], end_node: points[01], r: 0.01, color: Purple},
+            Edge {start_node: points[03], end_node: points[02], r: 0.01, color: Purple},
+            Edge {start_node: points[03], end_node: points[07], r: 0.01, color: Purple},
+            Edge {start_node: points[03], end_node: points[11], r: 0.01, color: Purple},
 
-            Edge {start_node: points[05], end_node: points[01], r: 0.01},
-            Edge {start_node: points[05], end_node: points[04], r: 0.01},
-            Edge {start_node: points[05], end_node: points[07], r: 0.01},
-            Edge {start_node: points[05], end_node: points[13], r: 0.01},
+            Edge {start_node: points[05], end_node: points[01], r: 0.01, color: Purple},
+            Edge {start_node: points[05], end_node: points[04], r: 0.01, color: Purple},
+            Edge {start_node: points[05], end_node: points[07], r: 0.01, color: Purple},
+            Edge {start_node: points[05], end_node: points[13], r: 0.01, color: Purple},
 
-            Edge {start_node: points[06], end_node: points[02], r: 0.01},
-            Edge {start_node: points[06], end_node: points[04], r: 0.01},
-            Edge {start_node: points[06], end_node: points[07], r: 0.01},
-            Edge {start_node: points[06], end_node: points[14], r: 0.01},
+            Edge {start_node: points[06], end_node: points[02], r: 0.01, color: Purple},
+            Edge {start_node: points[06], end_node: points[04], r: 0.01, color: Purple},
+            Edge {start_node: points[06], end_node: points[07], r: 0.01, color: Purple},
+            Edge {start_node: points[06], end_node: points[14], r: 0.01, color: Purple},
 
-            Edge {start_node: points[09], end_node: points[01], r: 0.01},
-            Edge {start_node: points[09], end_node: points[08], r: 0.01},
-            Edge {start_node: points[09], end_node: points[11], r: 0.01},
-            Edge {start_node: points[09], end_node: points[13], r: 0.01},
+            Edge {start_node: points[09], end_node: points[01], r: 0.01, color: Purple},
+            Edge {start_node: points[09], end_node: points[08], r: 0.01, color: Purple},
+            Edge {start_node: points[09], end_node: points[11], r: 0.01, color: Purple},
+            Edge {start_node: points[09], end_node: points[13], r: 0.01, color: Purple},
 
-            Edge {start_node: points[10], end_node: points[02], r: 0.01},
-            Edge {start_node: points[10], end_node: points[08], r: 0.01},
-            Edge {start_node: points[10], end_node: points[11], r: 0.01},
-            Edge {start_node: points[10], end_node: points[14], r: 0.01},
+            Edge {start_node: points[10], end_node: points[02], r: 0.01, color: Purple},
+            Edge {start_node: points[10], end_node: points[08], r: 0.01, color: Purple},
+            Edge {start_node: points[10], end_node: points[11], r: 0.01, color: Purple},
+            Edge {start_node: points[10], end_node: points[14], r: 0.01, color: Purple},
 
-            Edge {start_node: points[12], end_node: points[04], r: 0.01},
-            Edge {start_node: points[12], end_node: points[08], r: 0.01},
-            Edge {start_node: points[12], end_node: points[13], r: 0.01},
-            Edge {start_node: points[12], end_node: points[14], r: 0.01},
+            Edge {start_node: points[12], end_node: points[04], r: 0.01, color: Purple},
+            Edge {start_node: points[12], end_node: points[08], r: 0.01, color: Purple},
+            Edge {start_node: points[12], end_node: points[13], r: 0.01, color: Purple},
+            Edge {start_node: points[12], end_node: points[14], r: 0.01, color: Purple},
 
-            Edge {start_node: points[15], end_node: points[07], r: 0.01},
-            Edge {start_node: points[15], end_node: points[11], r: 0.01},
-            Edge {start_node: points[15], end_node: points[13], r: 0.01},
-            Edge {start_node: points[15], end_node: points[14], r: 0.01},
+            Edge {start_node: points[15], end_node: points[07], r: 0.01, color: Purple},
+            Edge {start_node: points[15], end_node: points[11], r: 0.01, color: Purple},
+            Edge {start_node: points[15], end_node: points[13], r: 0.01, color: Purple},
+            Edge {start_node: points[15], end_node: points[14], r: 0.01, color: Purple},
         ],
     }
 }
@@ -283,7 +324,7 @@ pub fn create_3_sphere(res: i32) -> Object {
         let x = theta.cos() * r;
         let z = theta.sin() * r;
 
-        nodes.push(Node { pos: Pos4D { x, y, z, w: 0.0 }, r: 1.0 })
+        nodes.push(Node { pos: Pos4D { x, y, z, w: 0.0 }, r: 1.0, color: Purple })
     }
 
     Object { nodes, edges }
@@ -318,7 +359,7 @@ pub fn create_4_sphere(res: i32, r: f64) -> Object {
 
                 let pos = Pos4D { x, y, z, w };
 
-                nodes.push( Node { pos, r: 0.1 } );
+                nodes.push( Node { pos, r: 0.1 , color: Purple} );
             }
         } 
     }
