@@ -2,12 +2,12 @@
 pub mod pos;
 pub mod matrix;
 pub mod shapes;
-
-use matrix::*;
-use pos::*;
+pub mod projection;
 
 use pixels::{SurfaceTexture, PixelsBuilder, Error};
-use winit::{event_loop::EventLoop, window::WindowBuilder, event::{Event, WindowEvent}, dpi::{LogicalSize, PhysicalSize}};
+use winit::{event_loop::EventLoop, window::WindowBuilder, event::{Event, WindowEvent}, dpi::{LogicalSize}};
+
+use crate::pos::*;
 
 #[allow(unused_imports)]
 use shapes::{Object, create_4_cube, create_3_sphere, create_3_cube, create_4_sphere, empty};
@@ -43,8 +43,8 @@ fn main() -> Result<(), Error> {
 
     // let shape = create_3_cube(1.0);
     // let shape = create_4_cube(1.0);
-    let shape = create_3_sphere(1000);
-    // let shape = create_4_sphere(1600, 1.8);
+    // let shape = create_3_sphere(1000);
+    let shape = create_4_sphere(3200, 1.8);
     // let shape = empty();
 
     event_loop.run(move | event, _, control_flow | {
@@ -89,30 +89,4 @@ fn main() -> Result<(), Error> {
             _ => ()
         }
     })
-}
-
-static SCREEN_MATRIX_3D: Matrix2x3 = Matrix2x3 {
-    x: Pos3D { x:  0.866, y:  0.0, z: -0.866 },
-    y: Pos3D { x: -0.5,   y:  -1.0, z: -0.5  },
-};
-
-// fn perspective(pos: Pos4D, size: PhysicalSize<u32>) -> Pos2D {
-//     let scale = 2.0;
-//     let bound = size.width.min(size.height) as f64 / 2.0;
-//     let zratio = pos.z / scale;
-
-//     Pos2D { 
-//         x: (size.width as f64  / 2.0 + (0.9 + zratio * 0.3) * bound * (pos.x / scale)).floor(), 
-//         y: (size.height as f64 / 2.0 - (0.9 + zratio * 0.3) * bound * (pos.y / scale)).floor(),
-//     }
-// }
-
-fn sterographic(pos: Pos4D, size: PhysicalSize<u32>) -> Pos2D {    
-    let pos_3d = Pos3D {
-        x: (pos.x / (2.0 + pos.w)), 
-        y: (pos.y / (2.0 + pos.w)), 
-        z: (pos.z / (2.0 + pos.w)),
-    };
-
-    (pos_3d * SCALE).to_screen_coords(SCREEN_MATRIX_3D, size)
 }

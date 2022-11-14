@@ -1,9 +1,12 @@
 use std::f64::consts::PI;
 use winit::dpi::PhysicalSize;
 
-use crate::{pos::*, sterographic, matrix::*};
+use crate::pos::*;
+use crate::matrix::*;
 use crate::shapes::Color::*;
 use crate::pos::RotationPlane::*;
+use crate::projection::Projection;
+use crate::projection::Projection::*;
 
 #[derive(Clone, Copy)]
 pub enum Color {
@@ -39,6 +42,7 @@ impl Color {
 pub struct Object {
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,
+    projection: Projection,
 }
 
 #[derive(Clone, Copy)]
@@ -65,11 +69,11 @@ impl Object {
         let rotated: Object = self.rotate(rotation_matrix);
 
         for (_, edge) in rotated.edges.iter().enumerate() {
-            edge.draw(screen, size);
+            edge.draw(screen, size, self.projection);
         }
 
         for (_, node) in rotated.nodes.iter().enumerate() {
-            node.draw(screen, size);
+            node.draw(screen, size, self.projection);
         }
     }
 }
@@ -94,7 +98,7 @@ impl Transform<Matrix4x4, Pos4D> for Object {
             nodes.push(node.rotate(rotation_matrix));
         }
         
-        Self { nodes, edges }
+        Self { nodes, edges, projection: self.projection }
     }
 
     fn transform(&self, vector: Pos4D) -> Self {
@@ -110,7 +114,7 @@ impl Transform<Matrix4x4, Pos4D> for Object {
             nodes.push(node.transform(vector));
         }
         
-        Self { nodes, edges }
+        Self { nodes, edges, projection: self.projection }
     }
 
     fn scale(&self, scale: f64) -> Self {
@@ -126,7 +130,7 @@ impl Transform<Matrix4x4, Pos4D> for Object {
             nodes.push(node.scale(scale));
         }
         
-        Self { nodes, edges }
+        Self { nodes, edges, projection: self.projection }
     }
 }
 
@@ -168,37 +172,7 @@ impl Transform<Matrix4x4, Pos4D> for Edge {
 }
 
 trait Render {
-    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>);
-    fn print_point(x: i32, y: i32, r: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]);
-}
-
-fn scale(pos: Pos4D) -> f64 {
-    // Make the color dependant on the angle to the camera
-    let pos_3d: Pos3D       = Pos3D { x: pos.x, y: pos.y,   z: pos.z };
-    let to_camera: Pos3D    = Pos3D { x: -1.0,  y: 1.0,     z: -1.0  };
-    
-    // The smaller the angle to the camera, the larger the nodes are when drawn to the screen
-    (to_camera * (1.0 / to_camera.len())) ^ (pos_3d * (1.0 / pos_3d.len())) * 2.0
-}
-
-impl Render for Node {
-    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>) {
-        // if self.pos.w != self.pos.w.clamp(0.9, 1.1) {return};
-
-        // Transform the Node to screen coordinates
-        let pos: Pos2D = sterographic(self.pos, size);
-
-        let r = scale(self.pos) * self.r;
-
-        // Set the color of the points
-        let mut rgba = self.color.get_rgba();
-        rgba[2] = (50.0 * (self.pos.w + 2.5)) as u8;
-
-        // Draw small cubes around the point
-        if r < 0.4 {return};
-        Self::print_point(pos.x as i32, pos.y as i32, r as i32, screen, size, rgba);
-    }
-
+    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, projection: Projection);
     fn print_point(x: i32, y: i32, r: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]) {
         for x_off in -r..=r {
             for y_off in -r..=r {
@@ -211,11 +185,39 @@ impl Render for Node {
     }
 }
 
+fn scale(pos: Pos4D) -> f64 {
+    // Make the color dependant on the angle to the camera
+    let pos_3d: Pos3D       = Pos3D { x: pos.x, y: pos.y,   z: pos.z };
+    let to_camera: Pos3D    = Pos3D { x: -1.0,  y: 1.0,     z: -1.0  };
+    
+    // The smaller the angle to the camera, the larger the nodes are when drawn to the screen
+    (to_camera * (1.0 / to_camera.len())) ^ (pos_3d * (1.0 / pos_3d.len())) * 2.0
+}
+
+impl Render for Node {
+    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, projection: Projection) {
+        // if self.pos.w != self.pos.w.clamp(0.9, 1.1) {return};
+
+        // Transform the Node to screen coordinates
+        let pos: Pos2D = projection.project(self.pos, size);
+
+        let r = scale(self.pos) * self.r;
+
+        // Set the color of the points
+        let mut rgba = self.color.get_rgba();
+        rgba[2] = (50.0 * (self.pos.w + 2.5)) as u8;
+
+        // Draw small cubes around the point
+        if r < 0.4 {return};
+        Self::print_point(pos.x as i32, pos.y as i32, r as i32, screen, size, rgba);
+    }
+}
+
 impl Render for Edge {
-    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>) {
+    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, projection: Projection) {
         // Calculate the screen coordinates of the start and end points
-        let start_point:    Pos2D = sterographic(self.start_node,   size);
-        let end_point:      Pos2D = sterographic(self.end_node,     size);
+        let start_point:    Pos2D = projection.project(self.start_node,   size);
+        let end_point:      Pos2D = projection.project(self.end_node,     size);
 
         // Calculate vector for line connecting start and end point
         let edge = {
@@ -246,17 +248,6 @@ impl Render for Edge {
             Self::print_point(x_p, y_p, r, screen, size, rgba);
         }
     }
-
-    fn print_point(x: i32, y: i32, r: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]) {
-        for x_off in -r..=r {
-            for y_off in -r..=r {
-                let x_p = x + x_off;
-                let y_p = y + y_off;
-    
-                print_coord_in_pixelbuffer(x_p, y_p, screen, size, color)
-            }
-        }
-    }
 }
 
 fn print_coord_in_pixelbuffer(x : i32, y: i32, screen: &mut [u8], size: PhysicalSize<u32>, color: [u8; 4]) {
@@ -284,7 +275,7 @@ pub fn empty() -> Object {
 
     let edges: Vec<Edge> = Vec::new();
 
-    Object { nodes, edges }
+    Object { nodes, edges, projection: Stereographic }
 }
 
 pub fn create_3_cube(r: f64) -> Object {
@@ -327,6 +318,7 @@ pub fn create_3_cube(r: f64) -> Object {
             Edge {start_node: points[06], end_node: points[04], r: 1.0, color: Purple},
             Edge {start_node: points[06], end_node: points[07], r: 1.0, color: Purple},
         ],
+        projection: Stereographic,
     }
 }
 
@@ -410,6 +402,7 @@ pub fn create_4_cube(r: f64) -> Object {
             Edge {start_node: points[15], end_node: points[13], r: 1.0, color: Purple},
             Edge {start_node: points[15], end_node: points[14], r: 1.0, color: Purple},
         ],
+        projection: Stereographic, 
     }
 }
 
@@ -431,7 +424,7 @@ pub fn create_3_sphere(res: i32) -> Object {
         nodes.push(Node { pos: Pos4D { x, y, z, w: 0.0 }, r: 1.0, color: Purple })
     }
 
-    Object { nodes, edges }
+    Object { nodes, edges, projection: Stereographic }
 }
 
 pub fn create_4_sphere(res: i32, r: f64) -> Object {
@@ -468,5 +461,5 @@ pub fn create_4_sphere(res: i32, r: f64) -> Object {
         } 
     }
 
-    Object { nodes, edges }
+    Object { nodes, edges, projection: Stereographic }
 }
