@@ -1,4 +1,4 @@
-use std::{ops};
+use std::ops;
 
 use winit::dpi::PhysicalSize;
 
@@ -26,20 +26,80 @@ impl RotationPlane {
     pub fn get_rot_mat(axis: RotationPlane, angle: f64) -> Matrix4x4 {
         let cos: f64 = angle.cos();
         let sin: f64 = angle.sin();
-        
+
         match axis {
-            XY => Matrix4x4::new([[cos, sin, 0.0, 0.0], [-sin, cos, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-            XZ => Matrix4x4::new([[cos, 0.0, sin, 0.0], [0.0, 1.0, 0.0, 0.0], [-sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-            XW => Matrix4x4::new([[cos, 0.0, 0.0, sin], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [-sin, 0.0, 0.0, cos]]),
-            YX => Matrix4x4::new([[cos, -sin, 0.0, 0.0], [sin, cos, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-            YZ => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, sin, 0.0], [0.0, -sin, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-            YW => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, sin], [0.0, 0.0, 1.0, 0.0], [0.0, -sin, 0.0, cos]]),
-            ZX => Matrix4x4::new([[cos, 0.0, -sin, 0.0], [0.0, 1.0, 0.0, 0.0], [sin, 0.0, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-            ZY => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, -sin, 0.0], [0.0, sin, cos, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-            ZW => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, sin], [0.0, 0.0, -sin, cos]]),
-            WX => Matrix4x4::new([[cos, 0.0, 0.0, -sin], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [sin, 0.0, 0.0, cos]]),
-            WY => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, cos, 0.0, -sin], [0.0, 0.0, 1.0, 0.0], [0.0, sin, 0.0, cos]]),
-            WZ => Matrix4x4::new([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, cos, -sin], [0.0, 0.0, sin, cos]]), 
+            XY => Matrix4x4::new([
+                [cos, sin, 0.0, 0.0],
+                [-sin, cos, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]),
+            XZ => Matrix4x4::new([
+                [cos, 0.0, sin, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [-sin, 0.0, cos, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]),
+            XW => Matrix4x4::new([
+                [cos, 0.0, 0.0, sin],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [-sin, 0.0, 0.0, cos],
+            ]),
+            YX => Matrix4x4::new([
+                [cos, -sin, 0.0, 0.0],
+                [sin, cos, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]),
+            YZ => Matrix4x4::new([
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, cos, sin, 0.0],
+                [0.0, -sin, cos, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]),
+            YW => Matrix4x4::new([
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, cos, 0.0, sin],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, -sin, 0.0, cos],
+            ]),
+            ZX => Matrix4x4::new([
+                [cos, 0.0, -sin, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [sin, 0.0, cos, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]),
+            ZY => Matrix4x4::new([
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, cos, -sin, 0.0],
+                [0.0, sin, cos, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]),
+            ZW => Matrix4x4::new([
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, cos, sin],
+                [0.0, 0.0, -sin, cos],
+            ]),
+            WX => Matrix4x4::new([
+                [cos, 0.0, 0.0, -sin],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [sin, 0.0, 0.0, cos],
+            ]),
+            WY => Matrix4x4::new([
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, cos, 0.0, -sin],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, sin, 0.0, cos],
+            ]),
+            WZ => Matrix4x4::new([
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, cos, -sin],
+                [0.0, 0.0, sin, cos],
+            ]),
         }
     }
 }
@@ -130,7 +190,7 @@ impl ops::Add for Pos3D {
 
         Self::Output { x, y, z }
     }
-} 
+}
 
 impl ops::Mul<f64> for Pos3D {
     type Output = Pos3D;
@@ -160,7 +220,11 @@ impl Len for Pos3D {
 
 impl Pos3D {
     pub fn to_screen_coords(&self, screen_matrix: Matrix2x3, size: PhysicalSize<u32>) -> Pos2D {
-        screen_matrix * *self + Pos2D { x: size.width as f64 / 2.0, y: size.height as f64 / 2.0 }
+        screen_matrix * *self
+            + Pos2D {
+                x: size.width as f64 / 2.0,
+                y: size.height as f64 / 2.0,
+            }
     }
 }
 
@@ -177,7 +241,6 @@ trait Transformation {
 // }
 
 // impl Transformation for [[f64; 3]; 3] {
-    
 
 //     fn swap(&self, first_index: usize, second_index: usize) {
 //         let swap = self[first_index];
@@ -217,8 +280,8 @@ trait Transformation {
 // impl Solve for [[f64; 3]; 3] {
 //     fn gauss(&self, args: [f64; 3]) -> [f64; 3] {
 //         let rows = self.transpose();
-//         let result = 
-//         {   
+//         let result =
+//         {
 //             // Row reduction
 //             if rows[0][0] == 0.0 {
 //                 if rows[1][0] != 0.0 {
@@ -231,7 +294,7 @@ trait Transformation {
 //                     println!("Matrix not solvable, only zeroes in first column");
 //                 }
 //             }
-            
+
 //             // Reduce first entry of first row to 1
 //             let factor = 1.0 / rows[0][0];
 //             rows.mult_row(0, factor);
@@ -281,14 +344,14 @@ trait Transformation {
 //             let factor = -rows[0][2];
 //             rows.add_row(0, 2, factor);
 //             args.add_row(0, 2, factor);
-            
+
 //             let factor = -rows[1][2];
 //             rows.add_row(1, 2, factor);
 //             args.add_row(1, 2, factor);
 
 //             args
 //         };
-        
+
 //         result
 //     }
 
@@ -309,7 +372,7 @@ trait Transformation {
 //                     println!("Matrix not solvable, only zeroes in first column");
 //                 }
 //             }
-            
+
 //             // Reduce first entry of first row to 1
 //             let factor = 1.0 / rows[0][0];
 //             rows.mult_row(0, factor);
@@ -359,20 +422,20 @@ trait Transformation {
 //             let factor = -rows[0][2];
 //             rows.add_row(0, 2, factor);
 //             args.add_row(0, 2, factor);
-            
+
 //             let factor = -rows[1][2];
 //             rows.add_row(1, 2, factor);
 //             args.add_row(1, 2, factor);
 
 //             args
 //         };
-        
+
 //         return result;
 //     }
 
 //     fn transpose(&self) -> Self {
 //         let rows = [
-//             [self[0][0], self[1][0], self[2][0]], 
+//             [self[0][0], self[1][0], self[2][0]],
 //             [self[0][1], self[1][1], self[2][1]],
 //             [self[0][2], self[1][2], self[2][2]]
 //         ];
@@ -380,7 +443,7 @@ trait Transformation {
 //     }
 // }
 
-#[derive(Clone, Copy)] 
+#[derive(Clone, Copy)]
 pub struct Pos4D {
     pub x: f64,
     pub y: f64,
@@ -401,7 +464,6 @@ impl ops::Add for Pos4D {
     }
 }
 
-
 impl ops::Sub for Pos4D {
     type Output = Pos4D;
 
@@ -411,7 +473,6 @@ impl ops::Sub for Pos4D {
         let z: f64 = rhs.z - self.z;
         let w: f64 = rhs.w - self.w;
 
-        
         Self::Output { x, y, z, w }
     }
 }
@@ -436,6 +497,7 @@ impl ops::Div<f64> for Pos4D {
         self * (1.0 / rhs)
     }
 }
+
 
 impl Len for Pos4D {
     fn len(&self) -> f64 {
