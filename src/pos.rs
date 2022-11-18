@@ -498,6 +498,19 @@ impl ops::Div<f64> for Pos4D {
     }
 }
 
+// Use bitwise xor operator as cross product operator
+impl ops::BitXor for Pos4D {
+    type Output = Pos4D;
+
+    fn bitxor(self, rhs: Pos4D) -> Self::Output {
+        let x: f64 = self.y * rhs.z - self.z * rhs.y;
+        let y: f64 = self.z * rhs.w - self.w * rhs.z;
+        let z: f64 = self.w * rhs.x - self.x * rhs.w;
+        let w: f64 = self.x * rhs.y - self.y * rhs.x;
+
+        Pos4D { x, y, z, w }
+    }
+}
 
 impl Len for Pos4D {
     fn len(&self) -> f64 {

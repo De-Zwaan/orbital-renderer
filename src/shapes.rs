@@ -42,6 +42,7 @@ impl Color {
 pub struct Object {
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,
+    pub faces: Vec<Face>,
     projection: Projection,
 }
 
@@ -60,6 +61,15 @@ pub struct Edge {
     pub color: Color,
 }
 
+#[derive(Clone, Copy)]
+pub struct Face {
+    pub node_a: Pos4D,
+    pub node_b: Pos4D,
+    pub node_c: Pos4D,
+    pub r: f64,
+    pub color: Color,
+}
+
 impl Object {
     pub fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, t: u64) {
         let angle: f64 = t as f64 * PI / 256.0;
@@ -74,6 +84,10 @@ impl Object {
 
         for (_, node) in rotated.nodes.iter().enumerate() {
             node.draw(screen, size, self.projection);
+        }
+
+        for (_, face) in rotated.faces.iter().enumerate() {
+            face.draw(screen, size, self.projection);
         }
     }
 }
@@ -100,11 +114,17 @@ impl Transform<Matrix4x4, Pos4D> for Object {
         for (_i, node) in self.nodes.iter().enumerate() {
             nodes.push(node.rotate(rotation_matrix));
         }
+
+        let mut faces: Vec<Face> = Vec::new();
+        // Loop over all faces
+        for (_i, face) in self.faces.iter().enumerate() {
+            faces.push(face.rotate(rotation_matrix));
         }
 
         Self {
             nodes,
             edges,
+            faces,
             projection: self.projection,
         }
     }
@@ -122,10 +142,16 @@ impl Transform<Matrix4x4, Pos4D> for Object {
             nodes.push(node.transform(vector));
         }
 
+        let mut faces: Vec<Face> = Vec::new();
+        // Loop over all faces
+        for (_i, face) in self.faces.iter().enumerate() {
+            faces.push(face.transform(vector));
+        }
 
         Self {
             nodes,
             edges,
+            faces,
             projection: self.projection,
         }
     }
@@ -143,9 +169,16 @@ impl Transform<Matrix4x4, Pos4D> for Object {
             nodes.push(node.scale(scale));
         }
 
+        let mut faces: Vec<Face> = Vec::new();
+        // Loop over all faces
+        for (_i, face) in self.faces.iter().enumerate() {
+            faces.push(face.scale(scale));
+        }
+
         Self {
             nodes,
             edges,
+            faces,
             projection: self.projection,
         }
     }
@@ -215,6 +248,47 @@ impl Transform<Matrix4x4, Pos4D> for Edge {
     }
 }
 
+impl Transform<Matrix4x4, Pos4D> for Face {
+    fn rotate(&self, rotation_matrix: Matrix4x4) -> Self {
+        let node_a: Pos4D = rotation_matrix * self.node_a;
+        let node_b: Pos4D = rotation_matrix * self.node_b;
+        let node_c: Pos4D = rotation_matrix * self.node_c;
+
+        Self {
+            node_a,
+            node_b,
+            node_c,
+            r: self.r,
+            color: self.color,
+        }
+    }
+
+    fn transform(&self, vector: Pos4D) -> Self {
+        let node_a: Pos4D = self.node_a + vector;
+        let node_b: Pos4D = self.node_b + vector;
+        let node_c: Pos4D = self.node_c + vector;
+
+        Self {
+            node_a,
+            node_b,
+            node_c,
+            r: self.r,
+            color: self.color,
+        }
+    }
+
+    fn scale(&self, scale: f64) -> Self {
+        let node_a: Pos4D = self.node_a * scale;
+        let node_b: Pos4D = self.node_b * scale;
+        let node_c: Pos4D = self.node_c * scale;
+
+        Self {
+            node_a,
+            node_b,
+            node_c,
+            r: self.r,
+            color: self.color,
+        }
     }
 }
 
@@ -313,6 +387,64 @@ impl Render for Edge {
     }
 }
 
+impl Render for Face {
+    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, projection: Projection) {
+        let vector_a = self.node_b + self.node_a * -1.0;
+        let vector_b = self.node_c + self.node_a * -1.0;
+
+        // Get the normal vector of the surface by taking the cross product and normalise to a
+        // length of 1
+        let normal = vector_a ^ vector_b;
+        let n_normal = normal * (1.0 / normal.len());
+
+        // Let the brightness depend on the angle between the normal and the camera path
+        let brightness = scale(n_normal).clamp(0.0, 1.0);
+
+        // Get the locations of the three nodes of the triangle
+        let pos_a: Pos2D = projection.project(self.node_a, size);
+        let pos_b: Pos2D = projection.project(self.node_b, size);
+        let pos_c: Pos2D = projection.project(self.node_c, size);
+
+        // Get the radi of the points of the triangle
+        let r_a: f64 = scale(self.node_a);
+        let r_b: f64 = scale(self.node_b);
+        let r_c: f64 = scale(self.node_c);
+
+        // Calculate 2d vectors between the points on the screen
+        let a_to_b: Pos2D = pos_b + pos_a * -1.0;
+        let a_to_c: Pos2D = pos_c + pos_c * -1.0;
+
+        let mut rgba: [u8; 4] = self.color.get_rgba();
+
+        let resolution: f64 = 0.2;
+
+        // Iterate over points on the surface of the face and print them to the screen
+        for k1 in 1..((1.0 / resolution) as i32) {
+            for k2 in 1..((1.0 / resolution) as i32) {
+                // use trilinear coordinates to get points on the face of a triangle
+                let p =
+                    pos_a + (a_to_b * k1 as f64 * resolution) + (a_to_c * k2 as f64 * resolution);
+
+                // interpolate the radi of the points on the triangle
+                // let r = (((r_b - r_a) * i as f64 * resolution)
+                //    + ((r_c - r_a) * j as f64 * resolution)
+                //    + r_a) as i32;
+                let r = 3;
+
+                // Shift blue based on the w coordinate of the point on the surface
+                rgba[2] = (50.0
+                    * (((self.node_b.w - self.node_a.w) * k1 as f64 * resolution)
+                        + (self.node_c.w - self.node_a.w) * k2 as f64 * resolution))
+                    as u8;
+
+                // Change the alpha channel based on the angle between the camera and the surface
+                // rgba[3] = (256.0 * brightness) as u8;
+
+                Self::print_point(p.x as i32, p.y as i32, r, screen, size, rgba);
+            }
+        }
+    }
+}
 
 fn print_coord_in_pixelbuffer(
     x: i32,
@@ -389,10 +521,12 @@ pub fn empty() -> Object {
     ];
 
     let edges: Vec<Edge> = Vec::new();
+    let faces: Vec<Face> = Vec::new();
 
     Object {
         nodes,
         edges,
+        faces,
         projection: Stereographic,
     }
 }
@@ -566,6 +700,91 @@ pub fn create_3_cube(r: f64) -> Object {
                 color: Purple,
             },
         ],
+        faces: vec![
+            Face {
+                node_a: points[00],
+                node_b: points[01],
+                node_c: points[04],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[00],
+                node_b: points[04],
+                node_c: points[02],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[00],
+                node_b: points[02],
+                node_c: points[01],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[03],
+                node_b: points[01],
+                node_c: points[02],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[03],
+                node_b: points[02],
+                node_c: points[07],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[03],
+                node_b: points[07],
+                node_c: points[01],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[05],
+                node_b: points[01],
+                node_c: points[07],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[05],
+                node_b: points[04],
+                node_c: points[01],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[05],
+                node_b: points[07],
+                node_c: points[04],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[06],
+                node_b: points[02],
+                node_c: points[04],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[06],
+                node_b: points[04],
+                node_c: points[07],
+                r: 1.0,
+                color: Yellow,
+            },
+            Face {
+                node_a: points[06],
+                node_b: points[07],
+                node_c: points[02],
+                r: 1.0,
+                color: Yellow,
+            },
         ],
         projection: Stereographic,
     }
@@ -948,6 +1167,7 @@ pub fn create_4_cube(r: f64) -> Object {
                 color: Purple,
             },
         ],
+        faces: Vec::new(),
         projection: Stereographic,
     }
 }
@@ -955,6 +1175,7 @@ pub fn create_4_cube(r: f64) -> Object {
 pub fn create_3_sphere(res: i32) -> Object {
     let mut nodes: Vec<Node> = Vec::new();
     let edges: Vec<Edge> = Vec::new();
+    let faces: Vec<Face> = Vec::new();
 
     let phi = PI * (3.0 - (5.0_f64).sqrt());
 
@@ -977,6 +1198,7 @@ pub fn create_3_sphere(res: i32) -> Object {
     Object {
         nodes,
         edges,
+        faces,
         projection: Stereographic,
     }
 }
@@ -984,6 +1206,7 @@ pub fn create_3_sphere(res: i32) -> Object {
 pub fn create_4_sphere(res: i32, r: f64) -> Object {
     let mut nodes: Vec<Node> = Vec::new();
     let edges: Vec<Edge> = Vec::new();
+    let faces: Vec<Face> = Vec::new();
 
     let res_per_plane = (res as f64).sqrt() as i32;
 
@@ -1022,6 +1245,7 @@ pub fn create_4_sphere(res: i32, r: f64) -> Object {
     Object {
         nodes,
         edges,
+        faces,
         projection: Stereographic,
     }
 }
