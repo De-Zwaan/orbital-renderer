@@ -1,9 +1,6 @@
-#![windows_subsystem = "windows"]
-pub mod matrix;
-pub mod pos;
-pub mod projection;
-pub mod shapes;
+use std::f64::consts::PI;
 
+// Crates for window managment
 use pixels::{Error, PixelsBuilder, SurfaceTexture};
 use winit::{
     dpi::LogicalSize,
@@ -12,10 +9,8 @@ use winit::{
     window::WindowBuilder,
 };
 
-use crate::pos::*;
-
-#[allow(unused_imports)]
-use shapes::{create_3_cube, create_3_sphere, create_4_cube, create_4_sphere, empty, Object};
+// Actual rendering code
+use simple_graphics::{shapes::*, pos::RotationPlane};
 
 const WIDTH: u32 = 1000;
 const HEIGHT: u32 = 1000;
@@ -29,10 +24,9 @@ fn main() -> Result<(), Error> {
     let window = WindowBuilder::new()
         .with_title("Spinny Spinny")
         // .with_decorations(false)
-        // .with_transparent(true)
+        .with_transparent(true)
         .with_always_on_top(true)
         .with_inner_size(LogicalSize::new(WIDTH, HEIGHT))
-        .with_min_inner_size(LogicalSize::new(100, 100))
         .with_resizable(false)
         .build(&event_loop)
         .unwrap();
@@ -49,10 +43,11 @@ fn main() -> Result<(), Error> {
 
     let mut t: u64 = 0;
 
-    let shape = create_3_cube(1.0);
+    // let shape = create_3_cube(1.0);
     // let shape = create_4_cube(1.0);
     // let shape = create_3_sphere(1000);
-    // let shape = create_4_sphere(3200, 1.8);
+    let shape = create_4_sphere(3200, 1.8);
+    // let shape = create_torus(100, 1.8);
     // let shape = empty();
 
     event_loop.run(move |event, _, control_flow| {
@@ -82,14 +77,17 @@ fn main() -> Result<(), Error> {
 
                 let screen = pixels.get_frame();
 
-                for (_i, p) in screen.chunks_exact_mut(4).enumerate() {
-                    p.copy_from_slice(&[0x00, 0x00, 0x00, 0xff]);
-                }
+                // Create an empty pixelbuffer to render to
+                screen.chunks_exact_mut(4).for_each(|p| {
+                    p.copy_from_slice(&[0x00, 0x00, 0x00, 0x00]);
+                });
 
-                // Draw objects
-                shape.draw(screen, window.inner_size(), t);
+                // Transform and draw objects
+                shape
+                    .rotate_copy(RotationPlane::get_rot_mat_4d(RotationPlane::WY, t as f64 * PI / 256.0))
+                    .draw(screen, window.inner_size(), SCALE, simple_graphics::projection::Projection::Perspective);
 
-                // Render result
+                // Display the result on the screen
                 if pixels
                     .render()
                     .map_err(|e| println!("pixels.render() failed: {}", e))

@@ -2,9 +2,7 @@ use std::ops;
 
 use winit::dpi::PhysicalSize;
 
-use crate::matrix::{Matrix2x3, Matrix4x4};
-
-use crate::RotationPlane::*;
+use crate::matrix::{Matrix4x4, Matrix3x3, Matrix2x2};
 
 #[derive(Clone, Copy)]
 pub enum RotationPlane {
@@ -23,11 +21,13 @@ pub enum RotationPlane {
 }
 
 impl RotationPlane {
-    pub fn get_rot_mat(axis: RotationPlane, angle: f64) -> Matrix4x4 {
+    pub fn get_rot_mat_4d(plane: RotationPlane, angle: f64) -> Matrix4x4 {
         let cos: f64 = angle.cos();
         let sin: f64 = angle.sin();
 
-        match axis {
+        use RotationPlane::*;
+
+        match plane {
             XY => Matrix4x4::new([
                 [cos, sin, 0.0, 0.0],
                 [-sin, cos, 0.0, 0.0],
@@ -102,10 +102,78 @@ impl RotationPlane {
             ]),
         }
     }
+
+    pub fn _get_rot_mat_3d(plane: RotationPlane, angle: f64) -> Matrix3x3 {
+        let cos: f64 = angle.cos();
+        let sin: f64 = angle.sin();
+
+        use RotationPlane::*;
+
+        match plane {
+            XY => Matrix3x3::new([
+                [cos, sin, 0.0],
+                [-sin, cos, 0.0],
+                [0.0, 0.0, 1.0],
+            ]),
+            XZ => Matrix3x3::new([
+                [cos, 0.0, sin],
+                [0.0, 1.0, 0.0],
+                [-sin, 0.0, cos],
+            ]),
+            YX => Matrix3x3::new([
+                [cos, -sin, 0.0],
+                [sin, cos, 0.0],
+                [0.0, 0.0, 1.0],
+            ]),
+            YZ => Matrix3x3::new([
+                [1.0, 0.0, 0.0],
+                [0.0, cos, sin],
+                [0.0, -sin, cos],
+            ]),
+            ZX => Matrix3x3::new([
+                [cos, 0.0, -sin],
+                [0.0, 1.0, 0.0],
+                [sin, 0.0, cos],
+            ]),
+            ZY => Matrix3x3::new([
+                [1.0, 0.0, 0.0],
+                [0.0, cos, -sin],
+                [0.0, sin, cos],
+            ]),
+            _ => Matrix3x3::new([
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+            ]),
+        }
+    }
+
+    pub fn _get_rot_mat_2d(plane: RotationPlane, angle: f64) -> Matrix2x2 {
+        let cos: f64 = angle.cos();
+        let sin: f64 = angle.sin();
+
+        use RotationPlane::*;
+
+        match plane {
+            XY => Matrix2x2::new([
+                [cos, sin],
+                [-sin, cos],
+            ]),
+            YX => Matrix2x2::new([
+                [cos, -sin],
+                [sin, cos],
+            ]),
+            _ => Matrix2x2::new([
+                [1.0, 0.0],
+                [0.0, 1.0],
+            ]),
+        }
+    }
 }
 
 pub trait Len {
     fn len(&self) -> f64;
+    fn is_empty(&self) -> bool;
 }
 
 #[derive(Clone, Copy)]
@@ -136,6 +204,10 @@ impl ops::Mul<f64> for Pos1D {
 impl Len for Pos1D {
     fn len(&self) -> f64 {
         self.x
+    }
+
+    fn is_empty(&self) -> bool {
+        self.x == 0.0
     }
 }
 
@@ -171,6 +243,20 @@ impl Len for Pos2D {
     fn len(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2)).sqrt()
     }
+
+    fn is_empty(&self) -> bool {
+        self.x == 0.0 && self.y == 0.0
+    }
+}
+
+impl Pos2D {
+    /// Transform the rendered coordinates such that it is displayed in the center of the window
+    pub fn to_screen_coords(self, scale: f64, size: PhysicalSize<u32>) -> Pos2D {
+        self * scale + Pos2D {
+            x: size.width as f64 / 2.0,
+            y: size.height as f64 / 2.0,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -204,11 +290,27 @@ impl ops::Mul<f64> for Pos3D {
     }
 }
 
+// Use bitwise xor operator as cross product operator
 impl ops::BitXor for Pos3D {
+    type Output = Pos3D;
+
+    fn bitxor(self, rhs: Pos3D) -> Self::Output {
+        let x: f64 = self.y * rhs.z - self.z * rhs.y;
+        let y: f64 = self.z * rhs.x - self.x * rhs.z;
+        let z: f64 = self.x * rhs.y - self.y * rhs.x;
+
+        Self::Output { x, y, z }
+    }
+}
+
+// Use >> operator as a dot product operator
+impl ops::Shr for Pos3D {
     type Output = f64;
 
-    fn bitxor(self, rhs: Self) -> Self::Output {
-        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    fn shr(self, rhs: Self) -> Self::Output {
+        self.x * rhs.x + 
+        self.y * rhs.y +
+        self.z * rhs.z
     }
 }
 
@@ -216,15 +318,9 @@ impl Len for Pos3D {
     fn len(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
     }
-}
 
-impl Pos3D {
-    pub fn to_screen_coords(&self, screen_matrix: Matrix2x3, size: PhysicalSize<u32>) -> Pos2D {
-        screen_matrix * *self
-            + Pos2D {
-                x: size.width as f64 / 2.0,
-                y: size.height as f64 / 2.0,
-            }
+    fn is_empty(&self) -> bool {
+        self.x == 0.0 && self.y == 0.0 && self.z == 0.0
     }
 }
 
@@ -512,8 +608,24 @@ impl ops::BitXor for Pos4D {
     }
 }
 
+// Use >> operator as a dot product operator
+impl ops::Shr for Pos4D {
+    type Output = f64;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        self.x * rhs.x + 
+        self.y * rhs.y +
+        self.z * rhs.z + 
+        self.w * rhs.w
+    }
+}
+
 impl Len for Pos4D {
     fn len(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2) + self.w.powi(2)).sqrt()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.x == 0.0 && self.y == 0.0 && self.z == 0.0 && self.w == 0.0
     }
 }
