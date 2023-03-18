@@ -1,6 +1,7 @@
 use winit::dpi::PhysicalSize;
 
 pub mod matrix;
+pub mod orbital;
 pub mod pos;
 pub mod projection;
 pub mod shapes;

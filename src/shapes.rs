@@ -354,7 +354,7 @@ impl Render for Node {
         // Transform the Node to screen coordinates
         let pos: Pos2D = projection.project(self.pos, size, projection_scale);
 
-        let r = scale(self.pos, projection.get_camera_pos()) * self.r;
+        let r = self.r; //scale(self.pos, projection.get_camera_pos()) * self.r;
 
         // Set the color of the points
         let rgba = self.color.get_rgba();

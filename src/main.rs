@@ -10,7 +10,7 @@ use winit::{
 };
 
 // Actual rendering code
-use simple_graphics::{shapes::*, pos::RotationPlane};
+use simple_graphics::{orbital::create_orbital_v2, pos::RotationPlane, shapes::*};
 
 const WIDTH: u32 = 1000;
 const HEIGHT: u32 = 1000;
@@ -46,7 +46,9 @@ fn main() -> Result<(), Error> {
     // let shape = create_3_cube(1.0);
     // let shape = create_4_cube(1.0);
     // let shape = create_3_sphere(1000);
-    let shape = create_4_sphere(3200, 1.8);
+    // let shape = create_4_sphere(3200, 1.8);
+    // let shape = create_orbital(1000, 1.0, 2.0, 0.1);
+    let shape = create_orbital_v2(10, 0.1, f64::INFINITY, 0.2, 6.0).scale_copy(0.6);
     // let shape = create_torus(100, 1.8);
     // let shape = empty();
 
@@ -84,8 +86,17 @@ fn main() -> Result<(), Error> {
 
                 // Transform and draw objects
                 shape
-                    .rotate_copy(RotationPlane::get_rot_mat_4d(RotationPlane::WY, t as f64 * PI / 256.0))
-                    .draw(screen, window.inner_size(), SCALE, simple_graphics::projection::Projection::Perspective);
+                    .rotate_copy(RotationPlane::get_rot_mat_4d(
+                        RotationPlane::XZ,
+                        t as f64 * PI / 256.0,
+                    ))
+                    .rotate_copy(RotationPlane::get_rot_mat_4d(RotationPlane::YZ, -PI / 4.0))
+                    .draw(
+                        screen,
+                        window.inner_size(),
+                        SCALE,
+                        simple_graphics::projection::Projection::Perspective,
+                    );
 
                 // Display the result on the screen
                 if pixels
