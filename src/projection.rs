@@ -1,8 +1,8 @@
 use winit::dpi::PhysicalSize;
 
-use crate::projection::Projection::*;
-use crate::pos::*;
 use crate::matrix::*;
+use crate::pos::*;
+use crate::projection::Projection::*;
 
 #[derive(Clone, Copy)]
 pub enum Projection {
@@ -20,15 +20,15 @@ impl Projection {
                 y: 1.0,
                 z: -1.0,
             },
-            Stereographic => Pos3D { 
-                x: 1.0, 
-                y: 0.0, 
-                z: 0.0, 
+            Stereographic => Pos3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
             },
             Collapse => Pos3D {
                 x: 0.0,
                 y: 0.0,
-                z: 1.0, 
+                z: 1.0,
             },
         }
     }
@@ -47,19 +47,21 @@ impl Projection {
     /// ```
     pub fn project_to_3d(&self, pos: Pos4D) -> Pos3D {
         match self {
-            Perspective => {
-                Pos3D { x: pos.x, y: pos.y, z: pos.z }
+            Perspective => Pos3D {
+                x: pos.x,
+                y: pos.y,
+                z: pos.z,
             },
-            Stereographic => {
-                Pos3D {
-                    x: (pos.x / (2.0 + pos.w)), 
-                    y: (pos.y / (2.0 + pos.w)), 
-                    z: (pos.z / (2.0 + pos.w)),
-                }
-            }
-            Collapse => {
-                Pos3D { x: pos.x, y: pos.y, z: pos.z }
-            }
+            Stereographic => Pos3D {
+                x: (pos.x / (2.0 + pos.w)),
+                y: (pos.y / (2.0 + pos.w)),
+                z: (pos.z / (2.0 + pos.w)),
+            },
+            Collapse => Pos3D {
+                x: pos.x,
+                y: pos.y,
+                z: pos.z,
+            },
         }
     }
 
@@ -77,8 +79,16 @@ impl Projection {
     /// ```
     pub fn project_to_2d(&self, pos: Pos3D, size: PhysicalSize<u32>, scale: f64) -> Pos2D {
         static SCREEN_MATRIX_3D: Matrix2x3 = Matrix2x3 {
-            x: Pos3D { x:  0.866, y:  0.0, z: -0.866 },
-            y: Pos3D { x: -0.5,   y:  -1.0, z: -0.5  },
+            x: Pos3D {
+                x: 0.866,
+                y: 0.0,
+                z: -0.866,
+            },
+            y: Pos3D {
+                x: -0.5,
+                y: -1.0,
+                z: -0.5,
+            },
         };
 
         match self {
@@ -87,17 +97,13 @@ impl Projection {
                 let bound = size.width.min(size.height) as f64 / 2.0;
                 let zratio = 0.9 + (pos.z / scale) * 0.3;
 
-                Pos2D { 
-                    x: (size.width as f64  / 2.0 + zratio * bound * (pos.x / scale)).floor(), 
+                Pos2D {
+                    x: (size.width as f64 / 2.0 + zratio * bound * (pos.x / scale)).floor(),
                     y: (size.height as f64 / 2.0 - zratio * bound * (pos.y / scale)).floor(),
                 }
-            },
-            Stereographic => {
-                (SCREEN_MATRIX_3D * pos).to_screen_coords(scale, size) 
             }
-            Collapse => {
-                Pos2D { x: pos.x, y: pos.y }.to_screen_coords(scale, size) 
-            }
+            Stereographic => (SCREEN_MATRIX_3D * pos).to_screen_coords(scale, size),
+            Collapse => Pos2D { x: pos.x, y: pos.y }.to_screen_coords(scale, size),
         }
     }
 
@@ -105,7 +111,3 @@ impl Projection {
         self.project_to_2d(self.project_to_3d(pos), size, scale)
     }
 }
-
-
-
-

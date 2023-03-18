@@ -2,9 +2,9 @@ use std::ops;
 
 use winit::dpi::PhysicalSize;
 
-use crate::matrix::{Matrix4x4, Matrix3x3, Matrix2x2};
+use crate::matrix::{Matrix2x2, Matrix3x3, Matrix4x4};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum RotationPlane {
     XY,
     XZ,
@@ -110,41 +110,13 @@ impl RotationPlane {
         use RotationPlane::*;
 
         match plane {
-            XY => Matrix3x3::new([
-                [cos, sin, 0.0],
-                [-sin, cos, 0.0],
-                [0.0, 0.0, 1.0],
-            ]),
-            XZ => Matrix3x3::new([
-                [cos, 0.0, sin],
-                [0.0, 1.0, 0.0],
-                [-sin, 0.0, cos],
-            ]),
-            YX => Matrix3x3::new([
-                [cos, -sin, 0.0],
-                [sin, cos, 0.0],
-                [0.0, 0.0, 1.0],
-            ]),
-            YZ => Matrix3x3::new([
-                [1.0, 0.0, 0.0],
-                [0.0, cos, sin],
-                [0.0, -sin, cos],
-            ]),
-            ZX => Matrix3x3::new([
-                [cos, 0.0, -sin],
-                [0.0, 1.0, 0.0],
-                [sin, 0.0, cos],
-            ]),
-            ZY => Matrix3x3::new([
-                [1.0, 0.0, 0.0],
-                [0.0, cos, -sin],
-                [0.0, sin, cos],
-            ]),
-            _ => Matrix3x3::new([
-                [1.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0],
-                [0.0, 0.0, 1.0],
-            ]),
+            XY => Matrix3x3::new([[cos, sin, 0.0], [-sin, cos, 0.0], [0.0, 0.0, 1.0]]),
+            XZ => Matrix3x3::new([[cos, 0.0, sin], [0.0, 1.0, 0.0], [-sin, 0.0, cos]]),
+            YX => Matrix3x3::new([[cos, -sin, 0.0], [sin, cos, 0.0], [0.0, 0.0, 1.0]]),
+            YZ => Matrix3x3::new([[1.0, 0.0, 0.0], [0.0, cos, sin], [0.0, -sin, cos]]),
+            ZX => Matrix3x3::new([[cos, 0.0, -sin], [0.0, 1.0, 0.0], [sin, 0.0, cos]]),
+            ZY => Matrix3x3::new([[1.0, 0.0, 0.0], [0.0, cos, -sin], [0.0, sin, cos]]),
+            _ => Matrix3x3::new([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
         }
     }
 
@@ -155,18 +127,9 @@ impl RotationPlane {
         use RotationPlane::*;
 
         match plane {
-            XY => Matrix2x2::new([
-                [cos, sin],
-                [-sin, cos],
-            ]),
-            YX => Matrix2x2::new([
-                [cos, -sin],
-                [sin, cos],
-            ]),
-            _ => Matrix2x2::new([
-                [1.0, 0.0],
-                [0.0, 1.0],
-            ]),
+            XY => Matrix2x2::new([[cos, sin], [-sin, cos]]),
+            YX => Matrix2x2::new([[cos, -sin], [sin, cos]]),
+            _ => Matrix2x2::new([[1.0, 0.0], [0.0, 1.0]]),
         }
     }
 }
@@ -176,7 +139,7 @@ pub trait Len {
     fn is_empty(&self) -> bool;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Pos1D {
     pub x: f64,
 }
@@ -211,7 +174,7 @@ impl Len for Pos1D {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Pos2D {
     pub x: f64,
     pub y: f64,
@@ -252,14 +215,15 @@ impl Len for Pos2D {
 impl Pos2D {
     /// Transform the rendered coordinates such that it is displayed in the center of the window
     pub fn to_screen_coords(self, scale: f64, size: PhysicalSize<u32>) -> Pos2D {
-        self * scale + Pos2D {
-            x: size.width as f64 / 2.0,
-            y: size.height as f64 / 2.0,
-        }
+        self * scale
+            + Pos2D {
+                x: size.width as f64 / 2.0,
+                y: size.height as f64 / 2.0,
+            }
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Pos3D {
     pub x: f64,
     pub y: f64,
@@ -308,9 +272,7 @@ impl ops::Shr for Pos3D {
     type Output = f64;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        self.x * rhs.x + 
-        self.y * rhs.y +
-        self.z * rhs.z
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
     }
 }
 
@@ -539,7 +501,7 @@ trait Transformation {
 //     }
 // }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Pos4D {
     pub x: f64,
     pub y: f64,
@@ -613,10 +575,7 @@ impl ops::Shr for Pos4D {
     type Output = f64;
 
     fn shr(self, rhs: Self) -> Self::Output {
-        self.x * rhs.x + 
-        self.y * rhs.y +
-        self.z * rhs.z + 
-        self.w * rhs.w
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z + self.w * rhs.w
     }
 }
 

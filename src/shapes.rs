@@ -2,10 +2,10 @@ use std::f64::consts::PI;
 use std::vec;
 use winit::dpi::PhysicalSize;
 
-use crate::{matrix::*, print_coord_in_pixelbuffer};
 use crate::pos::*;
 use crate::projection::Projection;
 use crate::shapes::Color::*;
+use crate::{matrix::*, print_coord_in_pixelbuffer};
 
 #[derive(Clone, Copy)]
 pub enum Color {
@@ -70,7 +70,13 @@ pub struct Face {
 
 impl Object {
     /// Draw all edges, vertices and faces of the object
-    pub fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, projection_scale: f64, projection: Projection) {
+    pub fn draw(
+        &self,
+        screen: &mut [u8],
+        size: PhysicalSize<u32>,
+        projection_scale: f64,
+        projection: Projection,
+    ) {
         // Iterate over all edges, vertices and faces of the object and draw them
         self.edges.iter().for_each(|edge| {
             edge.draw(screen, size, projection, projection_scale);
@@ -291,7 +297,13 @@ impl Transform<Matrix4x4, Pos4D> for Face {
 
 trait Render {
     /// Determine the screen coordinates of objects using certain transformations and insert them into the pixelbuffer
-    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, projection: Projection, projection_scale: f64);
+    fn draw(
+        &self,
+        screen: &mut [u8],
+        size: PhysicalSize<u32>,
+        projection: Projection,
+        projection_scale: f64,
+    );
 
     /// Print a point to the screen with a certain y(square) radius
     fn print_point(
@@ -327,7 +339,16 @@ fn scale(pos: Pos4D, to_camera: Pos3D) -> f64 {
 }
 
 impl Render for Node {
-    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, projection: Projection, projection_scale: f64) {
+    fn draw(
+        &self,
+        screen: &mut [u8],
+        size: PhysicalSize<u32>,
+        projection: Projection,
+        projection_scale: f64,
+    ) {
+        if self.r as i32 <= 0 {
+            return;
+        };
         // if self.pos.w != self.pos.w.clamp(0.9, 1.1) {return};
 
         // Transform the Node to screen coordinates
@@ -336,8 +357,8 @@ impl Render for Node {
         let r = scale(self.pos, projection.get_camera_pos()) * self.r;
 
         // Set the color of the points
-        let mut rgba = self.color.get_rgba();
-        rgba[2] = (50.0 * (self.pos.w + 2.5)) as u8;
+        let rgba = self.color.get_rgba();
+        // rgba[2] = (50.0 * (self.pos.w + 2.5)) as u8;
 
         // Draw small cubes around the point
         if r < 0.4 {
@@ -349,7 +370,17 @@ impl Render for Node {
 }
 
 impl Render for Edge {
-    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, projection: Projection, projection_scale: f64) {
+    fn draw(
+        &self,
+        screen: &mut [u8],
+        size: PhysicalSize<u32>,
+        projection: Projection,
+        projection_scale: f64,
+    ) {
+        if self.r as i32 <= 0 {
+            return;
+        };
+
         // Calculate the screen coordinates of the start and end points
         let start_point: Pos2D = projection.project(self.start_node, size, projection_scale);
         let end_point: Pos2D = projection.project(self.end_node, size, projection_scale);
@@ -388,9 +419,17 @@ impl Render for Edge {
 }
 
 impl Render for Face {
-    fn draw(&self, screen: &mut [u8], size: PhysicalSize<u32>, projection: Projection, projection_scale: f64) {
-        let vector_a = projection.project_to_3d(self.node_b) + projection.project_to_3d(self.node_a) * -1.0;
-        let vector_b = projection.project_to_3d(self.node_c) + projection.project_to_3d(self.node_a) * -1.0;
+    fn draw(
+        &self,
+        screen: &mut [u8],
+        size: PhysicalSize<u32>,
+        projection: Projection,
+        projection_scale: f64,
+    ) {
+        let vector_a =
+            projection.project_to_3d(self.node_b) + projection.project_to_3d(self.node_a) * -1.0;
+        let vector_b =
+            projection.project_to_3d(self.node_c) + projection.project_to_3d(self.node_a) * -1.0;
 
         // Get the normal vector of the surface by taking the cross product and normalise to a
         // length of 1
@@ -425,7 +464,7 @@ impl Render for Face {
 
         let mut t: Vec<Pos2D> = Vec::new();
 
-        const G: f64 = 1.0 / 1.32471795572; 
+        const G: f64 = 1.0 / 1.32471795572;
         static ALPHA: Pos2D = Pos2D { x: G, y: G * G };
 
         for n in 1..((1.0 / resolution) as i32) {
@@ -446,10 +485,15 @@ impl Render for Face {
         // Iterate over points on the surface of the face and print them to the screen
         for k1 in 1..((1.0 / resolution) as i32) {
             for k2 in 1..((1.0 / resolution) as i32) {
-                if k1 as f64 * resolution + k2 as f64 * resolution > 1.0 {break;}
-                if angle_to_camera < 0.0 {return;}
-                
-                let p = pos_a + a_to_b * (k1 as f64 * resolution) + a_to_c * (k2 as f64 * resolution); 
+                if k1 as f64 * resolution + k2 as f64 * resolution > 1.0 {
+                    break;
+                }
+                if angle_to_camera < 0.0 {
+                    return;
+                }
+
+                let p =
+                    pos_a + a_to_b * (k1 as f64 * resolution) + a_to_c * (k2 as f64 * resolution);
 
                 Self::print_point(p.x as i32, p.y as i32, self.r as i32, screen, size, rgba);
             }
@@ -1257,9 +1301,9 @@ pub fn create_torus(res: i32, r: f64) -> Object {
             let y = (major_r + minor_r * cos_t) * cos_p;
             let z = minor_r * sin_t;
             let w = 0.0;
-    
+
             let pos = Pos4D { x, y, z, w };
-    
+
             nodes.push(Node {
                 pos,
                 r: 1.0,
