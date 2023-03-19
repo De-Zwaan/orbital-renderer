@@ -53,17 +53,17 @@ pub struct Node {
 
 #[derive(Clone, Copy)]
 pub struct Edge {
-    pub start_node: Pos4D,
-    pub end_node: Pos4D,
+    pub start_node_index: usize,
+    pub end_node_index: usize,
     pub r: f64,
     pub color: Color,
 }
 
 #[derive(Clone, Copy)]
 pub struct Face {
-    pub node_a: Pos4D,
-    pub node_b: Pos4D,
-    pub node_c: Pos4D,
+    pub node_a_index: usize,
+    pub node_b_index: usize,
+    pub node_c_index: usize,
     pub r: f64,
     pub color: Color,
 }
@@ -79,15 +79,15 @@ impl Object {
     ) {
         // Iterate over all edges, vertices and faces of the object and draw them
         self.edges.iter().for_each(|edge| {
-            edge.draw(screen, size, projection, projection_scale);
+            edge.draw(&self.nodes, screen, size, projection, projection_scale);
         });
 
         self.nodes.iter().for_each(|node| {
-            node.draw(screen, size, projection, projection_scale);
+            node.draw(&self.nodes, screen, size, projection, projection_scale);
         });
 
         self.faces.iter().for_each(|face| {
-            face.draw(screen, size, projection, projection_scale);
+            face.draw(&self.nodes, screen, size, projection, projection_scale);
         });
     }
 }
@@ -98,200 +98,40 @@ where
     Self: Sized,
 {
     /// Rotate an object using a rotation matrix
-    fn rotate_copy(&self, rotation_matrix: T) -> Self;
+    fn rotate(&mut self, rotation_matrix: T);
 
     /// Move an object using a vector
-    fn move_copy(&self, vector: V) -> Self;
+    fn r#move(&mut self, vector: V);
 
     /// Scale an object using a 1D scalar
-    fn scale_copy(&self, scalar: f64) -> Self;
+    fn scale(&mut self, scalar: f64);
 }
 
 impl Transform<Matrix4x4, Pos4D> for Object {
-    fn rotate_copy(&self, rotation_matrix: Matrix4x4) -> Self {
-        let mut edges: Vec<Edge> = Vec::new();
-        // Loop over all edges
-        for edge in self.edges.iter() {
-            edges.push(edge.rotate_copy(rotation_matrix));
-        }
-
-        let mut nodes: Vec<Node> = Vec::new();
-        // Loop over all nodes
-        for node in self.nodes.iter() {
-            nodes.push(node.rotate_copy(rotation_matrix));
-        }
-
-        let mut faces: Vec<Face> = Vec::new();
-        // Loop over all faces
-        for face in self.faces.iter() {
-            faces.push(face.rotate_copy(rotation_matrix));
-        }
-
-        Self {
-            nodes,
-            edges,
-            faces,
-        }
+    fn rotate(&mut self, rotation_matrix: Matrix4x4) {
+        self.nodes.iter_mut().for_each(|node| node.rotate(rotation_matrix));
     }
 
-    fn move_copy(&self, vector: Pos4D) -> Self {
-        let mut edges: Vec<Edge> = Vec::new();
-        // Loop over all edges
-        for (_i, edge) in self.edges.iter().enumerate() {
-            edges.push(edge.move_copy(vector));
-        }
-
-        let mut nodes: Vec<Node> = Vec::new();
-        // Loop over all nodes
-        for (_i, node) in self.nodes.iter().enumerate() {
-            nodes.push(node.move_copy(vector));
-        }
-
-        let mut faces: Vec<Face> = Vec::new();
-        // Loop over all faces
-        for (_i, face) in self.faces.iter().enumerate() {
-            faces.push(face.move_copy(vector));
-        }
-
-        Self {
-            nodes,
-            edges,
-            faces,
-        }
+    fn r#move(&mut self, vector: Pos4D) {
+        self.nodes.iter_mut().for_each(|node| node.r#move(vector));
     }
 
-    fn scale_copy(&self, scale: f64) -> Self {
-        let mut edges: Vec<Edge> = Vec::new();
-        // Loop over all edges
-        for (_i, edge) in self.edges.iter().enumerate() {
-            edges.push(edge.scale_copy(scale));
-        }
-
-        let mut nodes: Vec<Node> = Vec::new();
-        // Loop over all nodes
-        for (_i, node) in self.nodes.iter().enumerate() {
-            nodes.push(node.scale_copy(scale));
-        }
-
-        let mut faces: Vec<Face> = Vec::new();
-        // Loop over all faces
-        for (_i, face) in self.faces.iter().enumerate() {
-            faces.push(face.scale_copy(scale));
-        }
-
-        Self {
-            nodes,
-            edges,
-            faces,
-        }
+    fn scale(&mut self, scale: f64) {
+       self.nodes.iter_mut().for_each(|node| node.scale(scale));
     }
 }
 
 impl Transform<Matrix4x4, Pos4D> for Node {
-    fn rotate_copy(&self, rotation_matrix: Matrix4x4) -> Self {
-        Self {
-            pos: rotation_matrix * self.pos,
-            r: self.r,
-            color: self.color,
-        }
+    fn rotate(&mut self, rotation_matrix: Matrix4x4) {
+        self.pos = rotation_matrix * self.pos;
     }
 
-    fn move_copy(&self, vector: Pos4D) -> Self {
-        Self {
-            pos: self.pos + vector,
-            r: self.r,
-            color: self.color,
-        }
+    fn r#move(&mut self, vector: Pos4D) {
+        self.pos = self.pos + vector;
     }
 
-    fn scale_copy(&self, scale: f64) -> Self {
-        Self {
-            pos: self.pos * scale,
-            r: self.r,
-            color: self.color,
-        }
-    }
-}
-
-impl Transform<Matrix4x4, Pos4D> for Edge {
-    fn rotate_copy(&self, rotation_matrix: Matrix4x4) -> Self {
-        let start_node: Pos4D = rotation_matrix * self.start_node;
-        let end_node: Pos4D = rotation_matrix * self.end_node;
-
-        Self {
-            start_node,
-            end_node,
-            r: self.r,
-            color: self.color,
-        }
-    }
-
-    fn move_copy(&self, vector: Pos4D) -> Self {
-        let start_node: Pos4D = self.start_node + vector;
-        let end_node: Pos4D = self.end_node + vector;
-
-        Self {
-            start_node,
-            end_node,
-            r: self.r,
-            color: self.color,
-        }
-    }
-
-    fn scale_copy(&self, scale: f64) -> Self {
-        let start_node: Pos4D = self.start_node * scale;
-        let end_node: Pos4D = self.end_node * scale;
-
-        Self {
-            start_node,
-            end_node,
-            r: self.r,
-            color: self.color,
-        }
-    }
-}
-
-impl Transform<Matrix4x4, Pos4D> for Face {
-    fn rotate_copy(&self, rotation_matrix: Matrix4x4) -> Self {
-        let node_a: Pos4D = rotation_matrix * self.node_a;
-        let node_b: Pos4D = rotation_matrix * self.node_b;
-        let node_c: Pos4D = rotation_matrix * self.node_c;
-
-        Self {
-            node_a,
-            node_b,
-            node_c,
-            r: self.r,
-            color: self.color,
-        }
-    }
-
-    fn move_copy(&self, vector: Pos4D) -> Self {
-        let node_a: Pos4D = self.node_a + vector;
-        let node_b: Pos4D = self.node_b + vector;
-        let node_c: Pos4D = self.node_c + vector;
-
-        Self {
-            node_a,
-            node_b,
-            node_c,
-            r: self.r,
-            color: self.color,
-        }
-    }
-
-    fn scale_copy(&self, scale: f64) -> Self {
-        let node_a: Pos4D = self.node_a * scale;
-        let node_b: Pos4D = self.node_b * scale;
-        let node_c: Pos4D = self.node_c * scale;
-
-        Self {
-            node_a,
-            node_b,
-            node_c,
-            r: self.r,
-            color: self.color,
-        }
+    fn scale(&mut self, scale: f64) {
+        self.pos = self.pos * scale;
     }
 }
 
@@ -299,6 +139,7 @@ trait Render {
     /// Determine the screen coordinates of objects using certain transformations and insert them into the pixelbuffer
     fn draw(
         &self,
+        nodes: &Vec<Node>,
         screen: &mut [u8],
         size: PhysicalSize<u32>,
         projection: Projection,
@@ -339,8 +180,10 @@ fn scale(pos: Pos4D, to_camera: Pos3D) -> f64 {
 }
 
 impl Render for Node {
+    #[allow(unused_variables)]
     fn draw(
         &self,
+        nodes: &Vec<Node>,
         screen: &mut [u8],
         size: PhysicalSize<u32>,
         projection: Projection,
@@ -372,6 +215,7 @@ impl Render for Node {
 impl Render for Edge {
     fn draw(
         &self,
+        nodes: &Vec<Node>,
         screen: &mut [u8],
         size: PhysicalSize<u32>,
         projection: Projection,
@@ -381,18 +225,21 @@ impl Render for Edge {
             return;
         };
 
+        let start_node: Node = nodes[self.start_node_index];
+        let end_node: Node = nodes[self.end_node_index];
+
         // Calculate the screen coordinates of the start and end points
-        let start_point: Pos2D = projection.project(self.start_node, size, projection_scale);
-        let end_point: Pos2D = projection.project(self.end_node, size, projection_scale);
+        let screen_start_point: Pos2D = projection.project(start_node.pos, size, projection_scale);
+        let screen_end_point: Pos2D = projection.project(end_node.pos, size, projection_scale);
 
         // Calculate vector for line connecting start and end point
-        let edge = { [end_point.x - start_point.x, end_point.y - start_point.y] };
+        let edge = { [screen_end_point.x - screen_start_point.x, screen_end_point.y - screen_start_point.y] };
 
         let to_camera = projection.get_camera_pos();
 
         // Calculate the radius of the start and end points of the edge
-        let start_point_r = scale(self.start_node, to_camera) * self.r;
-        let end_point_r = scale(self.end_node, to_camera) * self.r;
+        let start_point_r = scale(start_node.pos, to_camera) * self.r;
+        let end_point_r = scale(end_node.pos, to_camera) * self.r;
 
         // Set 1 / the amount of points that compose an edge
         let resolution: f64 = 0.01;
@@ -400,8 +247,8 @@ impl Render for Edge {
         let mut rgba = self.color.get_rgba();
 
         for i in 0..=((1.0 / resolution) as i32) {
-            let x_p = (edge[0] * i as f64 * resolution) as i32 + start_point.x as i32;
-            let y_p = (edge[1] * i as f64 * resolution) as i32 + start_point.y as i32;
+            let x_p = (edge[0] * i as f64 * resolution) as i32 + screen_start_point.x as i32;
+            let y_p = (edge[1] * i as f64 * resolution) as i32 + screen_start_point.y as i32;
 
             // Interpolate the radius of the points making up the edges
             let r =
@@ -409,8 +256,8 @@ impl Render for Edge {
 
             // Change the blue channel of the edge based on the w coordiante
             rgba[2] = (50.0
-                * (((self.end_node.w - self.start_node.w) * i as f64 * resolution
-                    + self.start_node.w)
+                * (((end_node.pos.w - start_node.pos.w) * i as f64 * resolution
+                    + start_node.pos.w)
                     + 2.5)) as u8;
 
             Self::print_point(x_p, y_p, r, screen, size, rgba);
@@ -421,35 +268,40 @@ impl Render for Edge {
 impl Render for Face {
     fn draw(
         &self,
+        nodes: &Vec<Node>,
         screen: &mut [u8],
         size: PhysicalSize<u32>,
         projection: Projection,
         projection_scale: f64,
     ) {
+        let node_a = nodes[self.node_a_index];
+        let node_b = nodes[self.node_b_index];
+        let node_c = nodes[self.node_c_index];
+
         let vector_a =
-            projection.project_to_3d(self.node_b) + projection.project_to_3d(self.node_a) * -1.0;
+            projection.project_to_3d(node_b.pos) + projection.project_to_3d(node_a.pos) * -1.0;
         let vector_b =
-            projection.project_to_3d(self.node_c) + projection.project_to_3d(self.node_a) * -1.0;
+            projection.project_to_3d(node_c.pos) + projection.project_to_3d(node_a.pos) * -1.0;
 
         // Get the normal vector of the surface by taking the cross product and normalise to a
         // length of 1
         let normal: Pos3D = vector_a ^ vector_b;
         let n_normal: Pos3D = normal * (1.0 / normal.len());
 
-        let to_camera: Pos3D = Pos3D {
-            x: -5.0,
-            y: 5.0,
-            z: -5.0,
-        };
+        let to_camera = projection.get_camera_pos();
 
         // Let the brightness depend on the angle between the normal and the camera path
         // 1 if staight on, 0 if perpendicular and -1 if facing opposite
         let angle_to_camera: f64 = n_normal >> (to_camera * (1.0 / to_camera.len()));
 
+        if angle_to_camera < 0.0 {
+            return;
+        }
+
         // Get the locations of the three nodes of the triangle
-        let pos_a: Pos2D = projection.project(self.node_a, size, projection_scale);
-        let pos_b: Pos2D = projection.project(self.node_b, size, projection_scale);
-        let pos_c: Pos2D = projection.project(self.node_c, size, projection_scale);
+        let pos_a: Pos2D = projection.project(node_a.pos, size, projection_scale);
+        let pos_b: Pos2D = projection.project(node_b.pos, size, projection_scale);
+        let pos_c: Pos2D = projection.project(node_c.pos, size, projection_scale);
 
         // Calculate 2d vectors between the points on the screen
         let a_to_b: Pos2D = pos_b + (pos_a * -1.0);
@@ -460,7 +312,7 @@ impl Render for Face {
         // Change the alpha channel based on the angle between the camera and the surface
         rgba[2] = 255_u8 - (255.0 * angle_to_camera.clamp(0.0, 1.0)) as u8;
 
-        let resolution: f64 = 0.1;
+        let resolution: f64 = 0.2;
 
         let mut t: Vec<Pos2D> = Vec::new();
 
@@ -487,9 +339,6 @@ impl Render for Face {
             for k2 in 1..((1.0 / resolution) as i32) {
                 if k1 as f64 * resolution + k2 as f64 * resolution > 1.0 {
                     break;
-                }
-                if angle_to_camera < 0.0 {
-                    return;
                 }
 
                 let p =
@@ -662,160 +511,160 @@ pub fn create_3_cube(r: f64) -> Object {
         ],
         edges: vec![
             Edge {
-                start_node: points[0],
-                end_node: points[1],
+                start_node_index: 0,
+                end_node_index: 1,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[0],
-                end_node: points[2],
+                start_node_index: 0,
+                end_node_index: 2,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[0],
-                end_node: points[4],
+                start_node_index: 0,
+                end_node_index: 4,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[3],
-                end_node: points[1],
+                start_node_index: 3,
+                end_node_index: 1,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[3],
-                end_node: points[2],
+                start_node_index: 3,
+                end_node_index: 2,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[3],
-                end_node: points[7],
+                start_node_index: 3,
+                end_node_index: 7,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[5],
-                end_node: points[1],
+                start_node_index: 5,
+                end_node_index: 1,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[5],
-                end_node: points[4],
+                start_node_index: 5,
+                end_node_index: 4,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[5],
-                end_node: points[7],
+                start_node_index: 5,
+                end_node_index: 7,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[6],
-                end_node: points[2],
+                start_node_index: 6,
+                end_node_index: 2,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[6],
-                end_node: points[4],
+                start_node_index: 6,
+                end_node_index: 4,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[6],
-                end_node: points[7],
+                start_node_index: 6,
+                end_node_index: 7,
                 r: 1.0,
                 color: Purple,
             },
         ],
         faces: vec![
             Face {
-                node_a: points[0],
-                node_b: points[1],
-                node_c: points[4],
+                node_a_index: 0,
+                node_b_index: 1,
+                node_c_index: 4,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[0],
-                node_b: points[4],
-                node_c: points[2],
+                node_a_index: 0,
+                node_b_index: 4,
+                node_c_index: 2,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[0],
-                node_b: points[2],
-                node_c: points[1],
+                node_a_index: 0,
+                node_b_index: 2,
+                node_c_index: 1,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[3],
-                node_b: points[1],
-                node_c: points[2],
+                node_a_index: 3,
+                node_b_index: 1,
+                node_c_index: 2,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[3],
-                node_b: points[2],
-                node_c: points[7],
+                node_a_index: 3,
+                node_b_index: 2,
+                node_c_index: 7,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[3],
-                node_b: points[7],
-                node_c: points[1],
+                node_a_index: 3,
+                node_b_index: 7,
+                node_c_index: 1,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[5],
-                node_b: points[1],
-                node_c: points[7],
+                node_a_index: 5,
+                node_b_index: 1,
+                node_c_index: 7,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[5],
-                node_b: points[4],
-                node_c: points[1],
+                node_a_index: 5,
+                node_b_index: 4,
+                node_c_index: 1,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[5],
-                node_b: points[7],
-                node_c: points[4],
+                node_a_index: 5,
+                node_b_index: 7,
+                node_c_index: 4,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[6],
-                node_b: points[2],
-                node_c: points[4],
+                node_a_index: 6,
+                node_b_index: 2,
+                node_c_index: 4,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[6],
-                node_b: points[4],
-                node_c: points[7],
+                node_a_index: 6,
+                node_b_index: 4,
+                node_c_index: 7,
                 r: 1.0,
                 color: Yellow,
             },
             Face {
-                node_a: points[6],
-                node_b: points[7],
-                node_c: points[2],
+                node_a_index: 6,
+                node_b_index: 7,
+                node_c_index: 2,
                 r: 1.0,
                 color: Yellow,
             },
@@ -1008,194 +857,194 @@ pub fn create_4_cube(r: f64) -> Object {
         ],
         edges: vec![
             Edge {
-                start_node: points[0],
-                end_node: points[1],
+                start_node_index: 0,
+                end_node_index: 1,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[0],
-                end_node: points[2],
+                start_node_index: 0,
+                end_node_index: 2,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[0],
-                end_node: points[4],
+                start_node_index: 0,
+                end_node_index: 4,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[0],
-                end_node: points[8],
+                start_node_index: 0,
+                end_node_index: 8,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[3],
-                end_node: points[1],
+                start_node_index: 3,
+                end_node_index: 1,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[3],
-                end_node: points[2],
+                start_node_index: 3,
+                end_node_index: 2,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[3],
-                end_node: points[7],
+                start_node_index: 3,
+                end_node_index: 7,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[3],
-                end_node: points[11],
+                start_node_index: 3,
+                end_node_index: 11,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[5],
-                end_node: points[1],
+                start_node_index: 5,
+                end_node_index: 1,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[5],
-                end_node: points[4],
+                start_node_index: 5,
+                end_node_index: 4,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[5],
-                end_node: points[7],
+                start_node_index: 5,
+                end_node_index: 7,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[5],
-                end_node: points[13],
+                start_node_index: 5,
+                end_node_index: 13,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[6],
-                end_node: points[2],
+                start_node_index: 6,
+                end_node_index: 2,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[6],
-                end_node: points[4],
+                start_node_index: 6,
+                end_node_index: 4,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[6],
-                end_node: points[7],
+                start_node_index: 6,
+                end_node_index: 7,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[6],
-                end_node: points[14],
+                start_node_index: 6,
+                end_node_index: 14,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[9],
-                end_node: points[1],
+                start_node_index: 9,
+                end_node_index: 1,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[9],
-                end_node: points[8],
+                start_node_index: 9,
+                end_node_index: 8,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[9],
-                end_node: points[11],
+                start_node_index: 9,
+                end_node_index: 11,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[9],
-                end_node: points[13],
+                start_node_index: 9,
+                end_node_index: 13,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[10],
-                end_node: points[2],
+                start_node_index: 10,
+                end_node_index: 2,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[10],
-                end_node: points[8],
+                start_node_index: 10,
+                end_node_index: 8,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[10],
-                end_node: points[11],
+                start_node_index: 10,
+                end_node_index: 11,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[10],
-                end_node: points[14],
+                start_node_index: 10,
+                end_node_index: 14,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[12],
-                end_node: points[4],
+                start_node_index: 12,
+                end_node_index: 4,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[12],
-                end_node: points[8],
+                start_node_index: 12,
+                end_node_index: 8,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[12],
-                end_node: points[13],
+                start_node_index: 12,
+                end_node_index: 13,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[12],
-                end_node: points[14],
+                start_node_index: 12,
+                end_node_index: 14,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[15],
-                end_node: points[7],
+                start_node_index: 15,
+                end_node_index: 7,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[15],
-                end_node: points[11],
+                start_node_index: 15,
+                end_node_index: 11,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[15],
-                end_node: points[13],
+                start_node_index: 15,
+                end_node_index: 13,
                 r: 1.0,
                 color: Purple,
             },
             Edge {
-                start_node: points[15],
-                end_node: points[14],
+                start_node_index: 15,
+                end_node_index: 14,
                 r: 1.0,
                 color: Purple,
             },

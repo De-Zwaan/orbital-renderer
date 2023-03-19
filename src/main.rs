@@ -41,16 +41,18 @@ fn main() -> Result<(), Error> {
     // Create a pixelarray
     let mut pixels: pixels::Pixels = PixelsBuilder::new(WIDTH, HEIGHT, surface_texture).build()?;
 
-    let mut t: u64 = 0;
+    // let mut t: u64 = 0;
 
-    // let shape = create_3_cube(1.0);
-    // let shape = create_4_cube(1.0);
-    // let shape = create_3_sphere(1000);
-    // let shape = create_4_sphere(3200, 1.8);
-    // let shape = create_orbital(1000, 1.0, 2.0, 0.1);
-    let shape = create_orbital_v2(10, 0.1, f64::INFINITY, 0.2, 6.0).scale_copy(0.6);
-    // let shape = create_torus(100, 1.8);
-    // let shape = empty();
+    // let mut shape = create_3_cube(1.0);
+    // let mut shape = create_4_cube(1.0);
+    // let mut shape = create_3_sphere(1000);
+    // let mut shape = create_4_sphere(3200, 1.8);
+    // let mut shape = create_orbital(1000, 1.0, 2.0, 0.1);
+    let mut shape: Object = create_orbital_v2(40, 0.1, f64::INFINITY, 0.2, 6.0);
+    // let mut shape = create_torus(100, 1.8);
+    // let mut shape = empty();
+
+    shape.scale(0.5);
 
     event_loop.run(move |event, _, control_flow| {
         control_flow.set_poll();
@@ -75,7 +77,7 @@ fn main() -> Result<(), Error> {
                 window.request_redraw();
             }
             Event::RedrawRequested(_) => {
-                t += 1;
+                // t += 1;
 
                 let screen = pixels.get_frame();
 
@@ -86,11 +88,11 @@ fn main() -> Result<(), Error> {
 
                 // Transform and draw objects
                 shape
-                    .rotate_copy(RotationPlane::get_rot_mat_4d(
+                    .rotate(RotationPlane::get_rot_mat_4d(
                         RotationPlane::XZ,
-                        t as f64 * PI / 256.0,
-                    ))
-                    .rotate_copy(RotationPlane::get_rot_mat_4d(RotationPlane::YZ, -PI / 4.0))
+                        PI / 256.0,
+                    ));
+                shape
                     .draw(
                         screen,
                         window.inner_size(),
