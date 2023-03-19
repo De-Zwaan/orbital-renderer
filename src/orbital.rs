@@ -40,14 +40,15 @@
 //     }
 // }
 
-use std::f64::consts::PI;
+use std::{f64::consts::PI, collections::HashMap};
 
 mod complex;
+mod lookup;
 
 use complex::Complex;
 
 use crate::{
-    pos::Pos4D,
+    pos::{Pos4D},
     shapes::{
         Color::{self, Green, Purple},
         Edge, Face, Node, Object,
@@ -153,31 +154,28 @@ fn adapt(start_value: f64, end_value: f64, cutoff: f64) -> f64 {
                                                                          // 0.5
 }
 
-pub fn create_orbital_v2(_res: usize, psi_min: f64, psi_max: f64, a: f64, max: f64) -> Object {
+pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f64) -> Object {
     let mut nodes: Vec<Node> = Vec::new();
     let mut edges: Vec<Edge> = Vec::new();
-    let faces: Vec<Face> = Vec::new();
+    let mut faces: Vec<Face> = Vec::new();
 
-    const RESOLUTION: usize = 50;
-
-    let (n, l, m) = (1, 0, 0);
+    let (n, l, m) = (3, 1, 0);
 
     // Generate psi for a number of points inside a cube
-    let mut psi_generated: [[[f64; RESOLUTION]; RESOLUTION]; RESOLUTION] =
-        [[[0.0; RESOLUTION]; RESOLUTION]; RESOLUTION];
+    let mut psi_generated: HashMap<(usize, usize, usize), f64> = HashMap::new();
 
-    for i in 0..RESOLUTION {
+    for i in 0..res {
         println!(
             "Calculating psi for {} of {} points...",
-            i * RESOLUTION * RESOLUTION,
-            RESOLUTION * RESOLUTION * RESOLUTION
+            i * res * res,
+            res * res * res
         );
-        for j in 0..RESOLUTION {
-            for k in 0..RESOLUTION {
+        for j in 0..res {
+            for k in 0..res {
                 let pos = Pos4D {
-                    x: ((i as f64 / RESOLUTION as f64) - 0.5) * max,
-                    y: ((j as f64 / RESOLUTION as f64) - 0.5) * max,
-                    z: ((k as f64 / RESOLUTION as f64) - 0.5) * max,
+                    x: ((i as f64 / res as f64) - 0.5) * max,
+                    y: ((j as f64 / res as f64) - 0.5) * max,
+                    z: ((k as f64 / res as f64) - 0.5) * max,
                     w: 0.0,
                 };
 
@@ -186,7 +184,7 @@ pub fn create_orbital_v2(_res: usize, psi_min: f64, psi_max: f64, a: f64, max: f
                 let psi: f64 =
                     radial_wave_function(n, l, r, a) * angular_wave_function(l, m, t, p, a);
 
-                psi_generated[i][j][k] = psi;
+                psi_generated.insert((i, j, k), psi);
 
                 // let psi_squared: f64 = psi * psi;
             }
@@ -194,18 +192,18 @@ pub fn create_orbital_v2(_res: usize, psi_min: f64, psi_max: f64, a: f64, max: f
     }
 
     // Marching cubes-like algoritm
-    for i in 0..(RESOLUTION - 1) {
+    for i in 0..(res - 1) {
         println!(
             "Generating {} of {} points...",
-            i * RESOLUTION * RESOLUTION,
-            RESOLUTION * RESOLUTION * RESOLUTION
+            i * res * res,
+            res * res * res
         );
-        for j in 0..(RESOLUTION - 1) {
-            for k in 0..(RESOLUTION - 1) {
+        for j in 0..(res - 1) {
+            for k in 0..(res - 1) {
                 let pos = Pos4D {
-                    x: ((i as f64 / RESOLUTION as f64) - 0.5) * max,
-                    y: ((j as f64 / RESOLUTION as f64) - 0.5) * max,
-                    z: ((k as f64 / RESOLUTION as f64) - 0.5) * max,
+                    x: ((i as f64 / res as f64) - 0.5) * max,
+                    y: ((j as f64 / res as f64) - 0.5) * max,
+                    z: ((k as f64 / res as f64) - 0.5) * max,
                     w: 0.0,
                 };
 
@@ -222,15 +220,15 @@ pub fn create_orbital_v2(_res: usize, psi_min: f64, psi_max: f64, a: f64, max: f
                 */
 
                 // Store the values of psi of neighbouring nodes in an array
-                let local_psi_generated: [f64; 8] = [
-                    psi_generated[i][j][k],
-                    psi_generated[i][j][k + 1],
-                    psi_generated[i][j + 1][k],
-                    psi_generated[i][j + 1][k + 1],
-                    psi_generated[i + 1][j][k],
-                    psi_generated[i + 1][j][k + 1],
-                    psi_generated[i + 1][j + 1][k],
-                    psi_generated[i + 1][j + 1][k + 1],
+                let local_psi_generated = [
+                    *psi_generated.get(&(i, j, k)).unwrap_or(&0.0),
+                    *psi_generated.get(&(i + 1, j, k)).unwrap_or(&0.0),
+                    *psi_generated.get(&(i, j + 1, k)).unwrap_or(&0.0),
+                    *psi_generated.get(&(i + 1, j + 1, k)).unwrap_or(&0.0),
+                    *psi_generated.get(&(i, j, k + 1)).unwrap_or(&0.0),
+                    *psi_generated.get(&(i + 1, j, k + 1)).unwrap_or(&0.0),
+                    *psi_generated.get(&(i, j + 1, k + 1)).unwrap_or(&0.0),
+                    *psi_generated.get(&(i + 1, j + 1, k + 1)).unwrap_or(&0.0),
                 ];
 
                 let mut byte: u8 = 0x0;
@@ -239,25 +237,39 @@ pub fn create_orbital_v2(_res: usize, psi_min: f64, psi_max: f64, a: f64, max: f
                 for (i, local_psi) in local_psi_generated.iter().enumerate() {
                     let is_in_range = local_psi.abs() <= psi_max && local_psi.abs() >= psi_min;
                     byte ^= (is_in_range as u8) << i;
-                }
+                };
 
                 // Don't draw empty or filled cubes
                 if byte != 0x00 && byte != 0xff {
-                    let (mut new_nodes, mut new_edges) = marching_cubes(
+                    let (mut new_nodes, mut new_edges, mut new_faces) = marching_cubes(
                         local_psi_generated,
                         psi_min,
                         byte,
                         pos,
-                        max / RESOLUTION as f64,
+                        max / res as f64,
                     );
+
+                    // Update the indices to match the new node indices
+                    new_edges.iter_mut().for_each(|edge| {
+                        edge.start_node_index += nodes.len();
+                        edge.end_node_index += nodes.len();
+                    });
+                    new_faces.iter_mut().for_each(|face| {
+                        face.node_a_index += nodes.len();
+                        face.node_b_index += nodes.len();
+                        face.node_c_index += nodes.len();
+                    });
+
+                    // Append the new nodes, edges and faces to the total object
                     nodes.append(&mut new_nodes);
                     edges.append(&mut new_edges);
-                }
-            }
-        }
-    }
+                    faces.append(&mut new_faces);
+                };
+            };
+        };
+    };
 
-    Object {
+    return Object {
         nodes,
         edges,
         faces,
@@ -270,369 +282,54 @@ fn marching_cubes(
     byte: u8,
     pos: Pos4D,
     size: f64,
-) -> (Vec<Node>, Vec<Edge>) {
+) -> (Vec<Node>, Vec<Edge>, Vec<Face>) {
     let mut nodes: Vec<Node> = Vec::new();
     let edges: Vec<Edge> = Vec::new();
-    // let faces: Vec<Face> = Vec::new();
+    let mut faces: Vec<Face> = Vec::new();
 
     /*
     Calculate the position of the vertices and edges
     0 (i      , j     , k     ), 0b0000_0001
-    1 (i      , j     , k + 1 ), 0b0000_0010
+    1 (i + 1  , j     , k     ), 0b0000_0010
     2 (i      , j + 1 , k     ), 0b0000_0100
-    3 (i      , j + 1 , k + 1 ), 0b0000_1000
-    4 (i + 1  , j     , k     ), 0b0001_0000
+    3 (i + 1  , j + 1 , k     ), 0b0000_1000
+    4 (i      , j     , k + 1 ), 0b0001_0000
     5 (i + 1  , j     , k + 1 ), 0b0010_0000
-    6 (i + 1  , j + 1 , k     ), 0b0100_0000
+    6 (i      , j + 1 , k + 1 ), 0b0100_0000
     7 (i + 1  , j + 1 , k + 1 ), 0b1000_0000
     */
 
+    // Let the color depend on the sign of the function
     let color: Color = if value[0] < 0.0 { Green } else { Purple };
 
-    // Test what edges have only one of two points active
-    if byte >> 0 & 1 == 1 && byte >> 1 & 1 == 0 {
-        // 0 & !1
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: 0.0,
-                    y: 0.0,
-                    z: adapt(value[0], value[1], cutoff) * size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 0 & 1 == 1 && byte >> 2 & 1 == 0 {
-        // 0 & !2
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: 0.0,
-                    y: adapt(value[0], value[2], cutoff) * size,
-                    z: 0.0,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 0 & 1 == 1 && byte >> 4 & 1 == 0 {
-        // 0 & !4
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: adapt(value[0], value[4], cutoff) * size,
-                    y: 0.0,
-                    z: 0.0,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
+    // Get the face edges for the current cube from the lookup table
+    let face_edge_indices = lookup::triangle_table(byte as usize);
+
+    // Iterate over the faces for the current cube
+    for face_edge_index in face_edge_indices.chunks(3).into_iter() {
+        if face_edge_index[0] == -1 {break};
+
+        // Get the positions of the vertices of the faces 
+        let face_vertices = face_edge_index.into_iter().map(| edge | edge_to_boundary_vertex(*edge, value, cutoff, pos, size)).collect::<Vec<Pos4D>>();
+        
+        // Generate a new face
+        let node_index_offset = nodes.len();
+        faces.push(Face { node_a_index: node_index_offset, node_b_index: node_index_offset + 1, node_c_index: node_index_offset + 2, r: 0.5, color });
+
+        // Generate the new nodes
+        face_vertices.iter().for_each(|vertex| nodes.push(Node { pos: *vertex, r: 0.0, color }));
     }
 
-    if byte >> 1 & 1 == 1 && byte >> 0 & 1 == 0 {
-        // 1 & !0
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: 0.0,
-                    y: 0.0,
-                    z: -adapt(value[1], value[0], cutoff) * size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 1 & 1 == 1 && byte >> 3 & 1 == 0 {
-        // 1 & !3
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: 0.0,
-                    y: adapt(value[1], value[3], cutoff) * size,
-                    z: size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 1 & 1 == 1 && byte >> 5 & 1 == 0 {
-        // 1 & !5
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: adapt(value[1], value[5], cutoff) * size,
-                    y: 0.0,
-                    z: size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
+    // Move the position of the vertex to the cutoff point
+    fn edge_to_boundary_vertex(edge_index: i8, value: [f64; 8], cutoff: f64, pos: Pos4D, size: f64) -> Pos4D {
+        let [vertex_0_index, vertex_1_index] = lookup::EDGE_VERTEX_INDICES[edge_index as usize];
+        let t0 = 1.0 - adapt(value[vertex_0_index as usize], value[vertex_1_index as usize], cutoff);
+        let t1 = 1.0 - t0;
+        let vertex_0_pos = lookup::VERTEX_RELATIVE_POSITION[vertex_0_index as usize] * size;
+        let vertex_1_pos = lookup::VERTEX_RELATIVE_POSITION[vertex_1_index as usize] * size;
+        
+        pos + vertex_0_pos * t0 + vertex_1_pos * t1
     }
 
-    if byte >> 2 & 1 == 1 && byte >> 3 & 1 == 0 {
-        // 2 & !3
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: 0.0,
-                    y: size,
-                    z: adapt(value[2], value[3], cutoff) * size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 2 & 1 == 1 && byte >> 0 & 1 == 0 {
-        // 2 & !0
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: 0.0,
-                    y: -adapt(value[2], value[0], cutoff) * size,
-                    z: 0.0,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 2 & 1 == 1 && byte >> 6 & 1 == 0 {
-        // 2 & !6
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: adapt(value[2], value[6], cutoff) * size,
-                    y: size,
-                    z: 0.0,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-
-    if byte >> 3 & 1 == 1 && byte >> 2 & 1 == 0 {
-        // 3 & !2
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: 0.0,
-                    y: size,
-                    z: -adapt(value[3], value[2], cutoff) * size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 3 & 1 == 1 && byte >> 1 & 1 == 0 {
-        // 3 & !1
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: 0.0,
-                    y: -adapt(value[3], value[1], cutoff) * size,
-                    z: size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 3 & 1 == 1 && byte >> 7 & 1 == 0 {
-        // 3 & !7
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: adapt(value[3], value[7], cutoff) * size,
-                    y: size,
-                    z: size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-
-    if byte >> 4 & 1 == 1 && byte >> 5 & 1 == 0 {
-        // 4 & !5
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: size,
-                    y: 0.0,
-                    z: adapt(value[4], value[5], cutoff) * size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 4 & 1 == 1 && byte >> 6 & 1 == 0 {
-        // 4 & !6
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: size,
-                    y: adapt(value[4], value[6], cutoff) * size,
-                    z: 0.0,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 4 & 1 == 1 && byte >> 0 & 1 == 0 {
-        // 4 & !0
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: -adapt(value[4], value[0], cutoff) * size,
-                    y: 0.0,
-                    z: 0.0,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-
-    if byte >> 5 & 1 == 1 && byte >> 4 & 1 == 0 {
-        // 5 & !4
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: size,
-                    y: 0.0,
-                    z: -adapt(value[5], value[4], cutoff) * size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 5 & 1 == 1 && byte >> 7 & 1 == 0 {
-        // 5 & !7
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: size,
-                    y: adapt(value[5], value[7], cutoff) * size,
-                    z: size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 5 & 1 == 1 && byte >> 1 & 1 == 0 {
-        // 5 & !1
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: -adapt(value[5], value[1], cutoff) * size,
-                    y: 0.0,
-                    z: size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-
-    if byte >> 6 & 1 == 1 && byte >> 7 & 1 == 0 {
-        // 6 & !7
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: size,
-                    y: size,
-                    z: adapt(value[6], value[7], cutoff) * size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 6 & 1 == 1 && byte >> 4 & 1 == 0 {
-        // 6 & !4
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: size,
-                    y: -adapt(value[6], value[4], cutoff) * size,
-                    z: 0.0,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 6 & 1 == 1 && byte >> 2 & 1 == 0 {
-        // 6 & !2
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: -adapt(value[6], value[2], cutoff) * size,
-                    y: size,
-                    z: 0.0,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-
-    if byte >> 7 & 1 == 1 && byte >> 6 & 1 == 0 {
-        // 7 & !6
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: size,
-                    y: size,
-                    z: -adapt(value[7], value[6], cutoff) * size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 7 & 1 == 1 && byte >> 5 & 1 == 0 {
-        // 7 & !5
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: size,
-                    y: -adapt(value[7], value[5], cutoff) * size,
-                    z: size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-    if byte >> 7 & 1 == 1 && byte >> 3 & 1 == 0 {
-        // 7 & !3
-        nodes.push(Node {
-            pos: pos
-                + Pos4D {
-                    x: -adapt(value[7], value[3], cutoff) * size,
-                    y: size,
-                    z: size,
-                    w: 0.0,
-                },
-            r: 1.0,
-            color,
-        })
-    }
-
-    (nodes, edges)
+    (nodes, edges, faces)
 }
