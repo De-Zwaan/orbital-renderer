@@ -58,12 +58,9 @@ use crate::{
 use self::complex::{Exp, Split};
 
 fn cartesian_to_spherical(x: f64, y: f64, z: f64) -> (f64, f64, f64) {
-    let x_nz = x; //if x as i32 == 0 {0.00000001} else {x};
-    let z_nz = y; //if z as i32 == 0 {0.00000001} else {z};
-
     let r = (x * x + z * z + y * y).sqrt();
-    let t = ((x * x + z * z).sqrt() / z_nz).atan();
-    let p = (z / x_nz).atan();
+    let t = (y / r).acos();
+    let p = y.signum() * (z / (x * x + z * z).sqrt()).acos();
 
     (r, t, p)
 }
