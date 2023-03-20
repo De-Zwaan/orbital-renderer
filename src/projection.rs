@@ -16,7 +16,7 @@ impl Projection {
     pub fn get_camera_pos(&self) -> Pos3D {
         match self {
             Perspective => Pos3D {
-                x: 0.0,
+                x: 1.0,
                 y: 0.0,
                 z: 1.0,
             },

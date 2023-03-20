@@ -310,9 +310,9 @@ impl Render for Face {
         let mut rgba: [u8; 4] = self.color.get_rgba();
 
         // Change the alpha channel based on the angle between the camera and the surface
-        rgba[2] = 255_u8 - (255.0 * angle_to_camera.clamp(0.0, 1.0)) as u8;
+        rgba[3] = (255.0 * angle_to_camera.clamp(0.0, 1.0)) as u8;
 
-        let resolution: f64 = 0.2;
+        let resolution: f64 = 0.08 / angle_to_camera.clamp(0.001, 1.0);
 
         // http://extremelearning.com.au/evenly-distributing-points-in-a-triangle/
         // let mut t: Vec<Pos2D> = Vec::new();
