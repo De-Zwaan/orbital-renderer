@@ -190,45 +190,51 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
                     *psi_generated.get(&(i + 1, j + 1, k + 1)).unwrap_or(&0.0),
                 ];
 
-                let mut byte: u8 = 0x0;
+                let mut positive_byte: u8 = 0x0;
+                let mut negative_byte: u8 = 0x0;
 
                 // Encode the valid and invalid nodes of the cube into a byte
                 for (i, local_psi) in local_psi_generated.iter().enumerate() {
-                    let is_in_range = local_psi.abs() <= psi_max && local_psi.abs() >= psi_min;
-                    byte ^= (is_in_range as u8) << i;
-                };
+                    positive_byte ^= ((*local_psi <= psi_max && *local_psi >= psi_min) as u8) << i;
+                    negative_byte ^= ((-*local_psi <= psi_max && -*local_psi >= psi_min) as u8) << i;
+                }
 
-                // Don't draw empty or filled cubes
-                if byte != 0x00 && byte != 0xff {
-                    let (mut new_nodes, mut new_edges, mut new_faces) = marching_cubes(
-                        local_psi_generated,
-                        psi_min,
-                        byte,
-                        pos,
-                        max / res as f64,
-                    );
+                fn run_marching_cubes(byte: u8, local_values: [f64; 8], node_index: usize, cutoff: f64, pos: Pos4D, color: Color, size: f64) -> (Vec<Node>, Vec<Edge>, Vec<Face>) {
+                    // Don't draw empty or filled cubes
+                    if byte == 0x00 && byte == 0xff {return (Vec::new(), Vec::new(), Vec::new())};
+
+                    let (new_nodes, mut new_edges, mut new_faces) =
+                        marching_cubes(local_values, cutoff, byte, pos, color, size);
 
                     // Update the indices to match the new node indices
                     new_edges.iter_mut().for_each(|edge| {
-                        edge.start_node_index += nodes.len();
-                        edge.end_node_index += nodes.len();
+                        edge.start_node_index += node_index;
+                        edge.end_node_index += node_index;
                     });
                     new_faces.iter_mut().for_each(|face| {
-                        face.node_a_index += nodes.len();
-                        face.node_b_index += nodes.len();
-                        face.node_c_index += nodes.len();
+                        face.node_a_index += node_index;
+                        face.node_b_index += node_index;
+                        face.node_c_index += node_index;
                     });
 
-                    // Append the new nodes, edges and faces to the total object
-                    nodes.append(&mut new_nodes);
-                    edges.append(&mut new_edges);
-                    faces.append(&mut new_faces);
-                };
-            };
-        };
-    };
+                    (new_nodes, new_edges, new_faces)
+                }
 
-    return Object {
+                let (mut new_nodes_neg, mut new_edges_neg, mut new_faces_neg) = run_marching_cubes(negative_byte, local_psi_generated, nodes.len(), psi_min, pos, Green, max / res as f64);
+                let (mut new_nodes_pos, mut new_edges_pos, mut new_faces_pos) = run_marching_cubes(positive_byte, local_psi_generated, nodes.len(), psi_min, pos, Purple, max / res as f64);
+                
+                // Append the new nodes, edges and faces to the total object
+                nodes.append(&mut new_nodes_neg);
+                nodes.append(&mut new_nodes_pos);
+                edges.append(&mut new_edges_neg);
+                edges.append(&mut new_edges_pos);
+                faces.append(&mut new_faces_neg);
+                faces.append(&mut new_faces_pos);
+            }
+        }
+    }
+
+    Object {
         nodes,
         edges,
         faces,
@@ -240,6 +246,7 @@ fn marching_cubes(
     cutoff: f64,
     byte: u8,
     pos: Pos4D,
+    color: Color,
     size: f64,
 ) -> (Vec<Node>, Vec<Edge>, Vec<Face>) {
     let mut nodes: Vec<Node> = Vec::new();
@@ -257,9 +264,6 @@ fn marching_cubes(
     6 (i      , j + 1 , k + 1 ), 0b0100_0000
     7 (i + 1  , j + 1 , k + 1 ), 0b1000_0000
     */
-
-    // Let the color depend on the sign of the function
-    let color: Color = if value[0] < 0.0 { Green } else { Purple };
 
     // Get the face edges for the current cube from the lookup table
     let face_edge_indices = lookup::triangle_table(byte as usize);
