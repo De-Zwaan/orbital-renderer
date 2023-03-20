@@ -86,19 +86,16 @@ fn main() -> Result<(), Error> {
                     p.copy_from_slice(&[0x00, 0x00, 0x00, 0x00]);
                 });
 
-                // Transform and draw objects
-                shape
-                    .rotate(RotationPlane::get_rot_mat_4d(
-                        RotationPlane::XZ,
-                        PI / 256.0,
-                    ));
-                shape
-                    .draw(
-                        screen,
-                        window.inner_size(),
-                        SCALE,
-                        simple_graphics::projection::Projection::Perspective,
-                    );
+                // Transform the object
+                shape.rotate(RotationPlane::get_rot_mat_4d(RotationPlane::XZ, PI / 256.0));
+
+                // Draw the object
+                shape.draw(
+                    screen,
+                    window.inner_size(),
+                    SCALE,
+                    simple_graphics::projection::Projection::Perspective,
+                );
 
                 // Display the result on the screen
                 if pixels

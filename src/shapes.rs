@@ -294,7 +294,7 @@ impl Render for Face {
         // 1 if staight on, 0 if perpendicular and -1 if facing opposite
         let angle_to_camera: f64 = n_normal >> (to_camera * (1.0 / to_camera.len()));
 
-        if angle_to_camera < 0.0 {
+        if angle_to_camera < -0.01 {
             return;
         }
 
@@ -314,16 +314,17 @@ impl Render for Face {
 
         let resolution: f64 = 0.2;
 
-        let mut t: Vec<Pos2D> = Vec::new();
-
-        const G: f64 = 1.0 / 1.32471795572;
-        static ALPHA: Pos2D = Pos2D { x: G, y: G * G };
-
-        for n in 1..((1.0 / resolution) as i32) {
-            t.push(ALPHA * n as f64)
-        }
-
         // http://extremelearning.com.au/evenly-distributing-points-in-a-triangle/
+        // let mut t: Vec<Pos2D> = Vec::new();
+
+        // Define constants to generate points on a triangle
+        // const G: f64 = 1.0 / 1.32471795572;
+        // static ALPHA: Pos2D = Pos2D { x: G, y: G * G };
+
+        // for n in 1..((1.0 / resolution) as i32) {
+        //     t.push(ALPHA * n as f64)
+        // }
+
         // for (_, p) in t.iter().enumerate() {
         //     let mut pos: Pos2D = Pos2D { x: 0.0, y: 0.0 };
         //     if p.x + p.y < 1.0 {
@@ -337,6 +338,7 @@ impl Render for Face {
         // Iterate over points on the surface of the face and print them to the screen
         for k1 in 1..((1.0 / resolution) as i32) {
             for k2 in 1..((1.0 / resolution) as i32) {
+                // Make sure it is a point on the triangle
                 if k1 as f64 * resolution + k2 as f64 * resolution > 1.0 {
                     break;
                 }

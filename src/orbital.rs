@@ -40,7 +40,7 @@
 //     }
 // }
 
-use std::{f64::consts::PI, collections::HashMap};
+use std::{collections::HashMap, f64::consts::PI};
 
 mod complex;
 mod lookup;
@@ -48,7 +48,7 @@ mod lookup;
 use complex::Complex;
 
 use crate::{
-    pos::{Pos4D},
+    pos::Pos4D,
     shapes::{
         Color::{self, Green, Purple},
         Edge, Face, Node, Object,
@@ -73,76 +73,38 @@ fn _spherical_to_cartesian(r: f64, t: f64, p: f64) -> (f64, f64, f64) {
     (x, y, z)
 }
 
-fn radial_wave_function(n: i32, l: i32, r: f64, a: f64) -> f64 {
-    match (n, l) {
-        (1, 0) => 1.0 / (1.0 * a).powi(3).sqrt() * 2.0 * (-r / a).exp(),
-        (2, 0) => {
-            1.0 / (2.0 * a).powi(3).sqrt() * 2.0 * (1.0 - r / (2.0 * a)) * (-r / (2.0 * a)).exp()
+fn radial_wave_function(n: i32, l: i32, r: f64, a: f64) -> Complex {
+    Complex(1.0, 0.0)
+        * match (n, l) {
+            (1, 0) => 1.0 / (1.0 * a).powi(3).sqrt() * 2.0 * (-r / a).exp(),
+            (2, 0) => 1.0 / (2.0 * a).powi(3).sqrt() * 2.0 * (1.0 - r / (2.0 * a)) * (-r / (2.0 * a)).exp(),
+            (2, 1) => 1.0 / (2.0 * a).powi(3).sqrt() * (r / (3.0_f64.sqrt() * a)) * (-r / (2.0 * a)).exp(),
+            (3, 0) => 1.0 / (3.0 * a).powi(3).sqrt() * (2.0 - 4.0 * r / (3.0 * a) + (4.0 * r * r) / (27.0 * a * a)) * (-r / (3.0 * a)).exp(),
+            (3, 1) => 1.0 / (3.0 * a).powi(3).sqrt() * (4.0 * 2.0_f64.sqrt() * r) / (9.0 * a) * (1.0 - r / (6.0 * a)) * (-r / (3.0 * a)).exp(),
+            (3, 2) => 1.0 / (3.0 * a).powi(3).sqrt() * (2.0 * 2.0_f64.sqrt() * r * r) / (27.0 * 5.0_f64.sqrt() * a * a) * (-r / (3.0 * a)).exp(),
+            _ => 0.0,
         }
-        (2, 1) => {
-            1.0 / (2.0 * a).powi(3).sqrt() * (r / (3.0_f64.sqrt() * a)) * (-r / (2.0 * a)).exp()
-        }
-        (3, 0) => {
-            1.0 / (3.0 * a).powi(3).sqrt()
-                * (2.0 - 4.0 * r / (3.0 * a) + (4.0 * r * r) / (27.0 * a * a))
-                * (-r / (3.0 * a)).exp()
-        }
-        (3, 1) => {
-            1.0 / (3.0 * a).powi(3).sqrt() * (4.0 * 2.0_f64.sqrt() * r) / (9.0 * a)
-                * (1.0 - r / (6.0 * a))
-                * (-r / (3.0 * a)).exp()
-        }
-        (3, 2) => {
-            1.0 / (3.0 * a).powi(3).sqrt() * (2.0 * 2.0_f64.sqrt() * r * r)
-                / (27.0 * 5.0_f64.sqrt() * a * a)
-                * (-r / (3.0 * a)).exp()
-        }
-        _ => 0.0,
-    }
 }
 
-fn angular_wave_function(l: i32, m: i32, t: f64, p: f64, _a: f64) -> f64 {
+fn angular_wave_function(l: i32, m: i32, t: f64, p: f64, _a: f64) -> Complex {
     match (l, m) {
-        (0, 0) => 1.0 / (4.0 * PI).sqrt(),
-        (1, -1) => -((3.0 / (8.0 * PI)).sqrt() * t.sin() * Complex(0.0, -p).exp()).Re(),
-        (1, 0) => (3.0 / (4.0 * PI)).sqrt() * t.cos(),
-        (1, 1) => ((3.0 / (8.0 * PI)).sqrt() * t.sin() * Complex(0.0, p).exp()).Re(),
-        (2, -2) => {
-            -((5.0 / (32.0 * PI)).sqrt() * t.sin() * t.sin() * Complex(0.0, -2.0 * p).exp()).Re()
-        }
-        (2, -1) => -((5.0 / (8.0 * PI)).sqrt() * t.cos() * t.sin() * Complex(0.0, -p).exp()).Re(),
-        (2, 0) => (5.0 / (16.0 * PI)).sqrt() * (3.0 * t.cos().powi(2) - 1.0),
-        (2, 1) => ((5.0 / (8.0 * PI)).sqrt() * t.cos() * t.sin() * Complex(0.0, p).exp()).Re(),
-        (2, 2) => {
-            ((5.0 / (32.0 * PI)).sqrt() * t.sin() * t.sin() * Complex(0.0, 2.0 * p).exp()).Re()
-        }
-        (3, -3) => {
-            -((35.0 / (64.0 * PI)).sqrt() * t.sin().powi(3) * Complex(0.0, -3.0 * p).exp()).Re()
-        }
-        (3, -2) => -((105.0 / (32.0 * PI)).sqrt()
-            * t.cos()
-            * t.sin().powi(2)
-            * Complex(0.0, -2.0 * p).exp())
-        .Re(),
-        (3, -1) => -((21.0 / (64.0 * PI)).sqrt()
-            * (5.0 * t.cos().powi(2) - 1.0)
-            * t.sin()
-            * Complex(0.0, -p).exp())
-        .Re(),
-        (3, 0) => (7.0 / (16.0 * PI)).sqrt() * (5.0 * t.cos().powi(3) - 3.0 * t.cos()),
-        (3, 1) => ((21.0 / (64.0 * PI)).sqrt()
-            * (5.0 * t.cos().powi(2) - 1.0)
-            * t.sin()
-            * Complex(0.0, p).exp())
-        .Re(),
-        (3, 2) => {
-            ((105.0 / (32.0 * PI)).sqrt() * t.cos() * t.sin().powi(2) * Complex(0.0, 2.0 * p).exp())
-                .Re()
-        }
-        (3, 3) => {
-            ((35.0 / (64.0 * PI)).sqrt() * t.sin().powi(3) * Complex(0.0, 3.0 * p).exp()).Re()
-        }
-        _ => 0.0,
+        (0, 0) => 1.0 / (4.0 * PI).sqrt() * Complex(1.0, 0.0),
+        (1, -1) => -(3.0 / (8.0 * PI)).sqrt() * t.sin() * Complex(0.0, -p).exp(),
+        (1, 0) => (3.0 / (4.0 * PI)).sqrt() * t.cos() * Complex(1.0, 0.0),
+        (1, 1) => (3.0 / (8.0 * PI)).sqrt() * t.sin() * Complex(0.0, p).exp() * Complex(1.0, 0.0),
+        (2, -2) => -(5.0 / (32.0 * PI)).sqrt() * t.sin() * t.sin() * Complex(0.0, -2.0 * p).exp(),
+        (2, -1) => -(5.0 / (8.0 * PI)).sqrt() * t.cos() * t.sin() * Complex(0.0, -p).exp(),
+        (2, 0) => (5.0 / (16.0 * PI)).sqrt() * (3.0 * t.cos().powi(2) - 1.0) * Complex(1.0, 0.0),
+        (2, 1) => (5.0 / (8.0 * PI)).sqrt() * t.cos() * t.sin() * Complex(0.0, p).exp(),
+        (2, 2) => (5.0 / (32.0 * PI)).sqrt() * t.sin() * t.sin() * Complex(0.0, 2.0 * p).exp(),
+        (3, -3) => -(35.0 / (64.0 * PI)).sqrt() * t.sin().powi(3) * Complex(0.0, -3.0 * p).exp(),
+        (3, -2) => -(105.0 / (32.0 * PI)).sqrt() * t.cos() * t.sin().powi(2) * Complex(0.0, -2.0 * p).exp(),
+        (3, -1) => -(21.0 / (64.0 * PI)).sqrt() * (5.0 * t.cos().powi(2) - 1.0) * t.sin() * Complex(0.0, -p).exp(),
+        (3, 0) => (7.0 / (16.0 * PI)).sqrt() * (5.0 * t.cos().powi(3) - 3.0 * t.cos()) * Complex(1.0, 0.0),
+        (3, 1) => (21.0 / (64.0 * PI)).sqrt() * (5.0 * t.cos().powi(2) - 1.0) * t.sin() * Complex(0.0, p).exp(),
+        (3, 2) => (105.0 / (32.0 * PI)).sqrt() * t.cos() * t.sin().powi(2) * Complex(0.0, 2.0 * p).exp(),
+        (3, 3) => (35.0 / (64.0 * PI)).sqrt() * t.sin().powi(3) * Complex(0.0, 3.0 * p).exp(),
+        _ => Complex(0.0, 0.0),
     }
 }
 
@@ -178,8 +140,8 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
 
                 let (r, t, p): (f64, f64, f64) = cartesian_to_spherical(pos.x, pos.y, pos.z);
 
-                let psi: f64 =
-                    radial_wave_function(n, l, r, a) * angular_wave_function(l, m, t, p, a);
+                let psi: f64 = radial_wave_function(n, l, r, a).Re()
+                    * angular_wave_function(l, m, t, p, a).Re();
 
                 psi_generated.insert((i, j, k), psi);
 
