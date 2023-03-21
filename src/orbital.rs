@@ -1,45 +1,3 @@
-// pub fn create_orbital(res: i32, psi_min: f64, psi_max: f64, scale: f64) -> Object {
-//     let mut nodes: Vec<Node> = Vec::new();
-//     let edges: Vec<Edge> = Vec::new();
-//     let faces: Vec<Face> = Vec::new();
-
-//     let phi = PI * (3.0 - (5.0_f64).sqrt());
-
-//     for psi in (psi_min * res as f64) as i32..(psi_max * res as f64) as i32 {
-//         for i in 0..res {
-//             let y = 1.0 - (i as f64 / (res - 1) as f64) * 2.0;
-//             let radius = (1.0 - y * y).sqrt();
-
-//             let theta = phi * i as f64;
-
-//             let x = theta.cos() * radius;
-//             let z = theta.sin() * radius;
-
-//             // let (r, t, p) = cartesian_to_spherical(x, y, z);
-
-//             // psi = 1.0 / (1 * scale).powf(3.0 / 2.0) * 2.0 * E.powf(-r / scale);
-//             let r = -((psi / res) as f64 * (1.0 * scale).powf(3.0 / 2.0) / 2.0).ln()
-//                 * scale
-//                 * (4.0 * PI).sqrt();
-
-//             // Calculate the new position of the point
-//             let pos = Pos4D { x, y, z, w: 0.0 } * r;
-
-//             nodes.push(Node {
-//                 pos: pos,
-//                 r: (psi / res) as f64,
-//                 color: Purple,
-//             })
-//         }
-//     }
-
-//     Object {
-//         nodes,
-//         edges,
-//         faces,
-//     }
-// }
-
 use std::{collections::HashMap, f64::consts::PI};
 
 mod complex;
@@ -52,10 +10,11 @@ use crate::{
     shapes::{
         Color::{self, Green, Purple},
         Edge, Face, Node, Object,
+    }, 
+    orbital::complex::{
+        AbsArg, Conjugate, Split, Exp
     },
 };
-
-use self::complex::{Exp, Split};
 
 fn cartesian_to_spherical(x: f64, y: f64, z: f64) -> (f64, f64, f64) {
     let r = (x * x + z * z + y * y).sqrt();
@@ -109,8 +68,7 @@ fn angular_wave_function(l: i32, m: i32, t: f64, p: f64, _a: f64) -> Complex {
 }
 
 fn adapt(start_value: f64, end_value: f64, cutoff: f64) -> f64 {
-    (cutoff - start_value.abs()) / (end_value.abs() - start_value.abs()) //.clamp(-1.0, 1.0)
-                                                                         // 0.5
+    (cutoff - start_value.abs()) / (end_value.abs() - start_value.abs())
 }
 
 pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f64) -> Object {
@@ -140,12 +98,10 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
 
                 let (r, t, p): (f64, f64, f64) = cartesian_to_spherical(pos.x, pos.y, pos.z);
 
-                let psi: f64 = radial_wave_function(n, l, r, a).Re()
-                    * angular_wave_function(l, m, t, p, a).Re();
+                let psi = radial_wave_function(n, l, r, a)
+                    * angular_wave_function(l, m, t, p, a);
 
-                psi_generated.insert((i, j, k), psi);
-
-                // let psi_squared: f64 = psi * psi;
+                psi_generated.insert((i, j, k), psi.Re());
             }
         }
     }
@@ -195,8 +151,8 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
 
                 // Encode the valid and invalid nodes of the cube into a byte
                 for (i, local_psi) in local_psi_generated.iter().enumerate() {
-                    positive_byte ^= ((*local_psi <= psi_max && *local_psi >= psi_min) as u8) << i;
-                    negative_byte ^= ((-*local_psi <= psi_max && -*local_psi >= psi_min) as u8) << i;
+                    positive_byte ^= ((*local_psi >= psi_min) as u8) << i;
+                    negative_byte ^= ((-*local_psi >= psi_min) as u8) << i;
                 }
 
                 fn run_marching_cubes(byte: u8, local_values: [f64; 8], node_index: usize, cutoff: f64, pos: Pos4D, color: Color, size: f64) -> (Vec<Node>, Vec<Edge>, Vec<Face>) {

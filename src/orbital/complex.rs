@@ -1,5 +1,6 @@
 use std::ops::{Add, Div, Mul, Sub};
 
+#[derive(Clone, Copy, Debug)]
 pub struct Complex(pub f64, pub f64);
 
 #[allow(non_snake_case)]
@@ -134,5 +135,37 @@ impl Exp for Complex {
 
     fn exp(self) -> Self::Output {
         Complex(self.0.exp() * self.1.cos(), self.0.exp() * self.1.sin())
+    }
+}
+pub trait AbsArg {
+    type Output;
+
+    fn abs(self) -> Self::Output;
+    fn arg(self) -> Self::Output;
+}
+
+impl AbsArg for Complex {
+    type Output = f64;
+
+    fn abs(self) -> Self::Output {
+        (self.0 * self.0 + self.1 * self.1).sqrt()
+    }
+
+    fn arg(self) -> Self::Output {
+        self.0.atan2(self.1)
+    }
+}
+
+pub trait Conjugate {
+    type Output;
+
+    fn conjugate(self) -> Self::Output;
+}
+
+impl Conjugate for Complex {
+    type Output = Complex;
+
+    fn conjugate(self) -> Self::Output {
+        Complex(self.0, -self.1)
     }
 }
