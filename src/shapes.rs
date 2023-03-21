@@ -307,12 +307,15 @@ impl Render for Face {
         let a_to_b: Pos2D = pos_b + (pos_a * -1.0);
         let a_to_c: Pos2D = pos_c + (pos_a * -1.0);
 
+        // Calculate the screen area of the face 
+        let area = 0.5 * (Pos3D { x: a_to_b.x, y: a_to_b.y, z: 0.0 } ^ Pos3D { x: a_to_c.x, y: a_to_c.y, z: 0.0 }).len();
+
         let mut rgba: [u8; 4] = self.color.get_rgba();
 
         // Change the alpha channel based on the angle between the camera and the surface
         rgba[3] = (255.0 * angle_to_camera.clamp(0.0, 1.0)) as u8;
 
-        let resolution: f64 = 0.08 / angle_to_camera.clamp(0.001, 1.0);
+        let resolution: f64 = angle_to_camera.clamp(0.001, 1.0) * area.sqrt();
 
         // http://extremelearning.com.au/evenly-distributing-points-in-a-triangle/
         // let mut t: Vec<Pos2D> = Vec::new();
@@ -336,15 +339,15 @@ impl Render for Face {
         // }
 
         // Iterate over points on the surface of the face and print them to the screen
-        for k1 in 1..((1.0 / resolution) as i32) {
-            for k2 in 1..((1.0 / resolution) as i32) {
+        for k1 in 0..=((resolution) as i32) {
+            for k2 in 0..=((resolution) as i32) {
                 // Make sure it is a point on the triangle
-                if k1 as f64 * resolution + k2 as f64 * resolution > 1.0 {
+                if k1 as f64 / resolution + k2 as f64 / resolution > 1.0 {
                     break;
                 }
 
                 let p =
-                    pos_a + a_to_b * (k1 as f64 * resolution) + a_to_c * (k2 as f64 * resolution);
+                    pos_a + a_to_b * (k1 as f64 / resolution) + a_to_c * (k2 as f64 / resolution);
 
                 Self::print_point(p.x as i32, p.y as i32, self.r as i32, screen, size, rgba);
             }
