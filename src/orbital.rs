@@ -233,7 +233,7 @@ fn marching_cubes(
         
         // Generate a new face
         let node_index_offset = nodes.len();
-        faces.push(Face { node_a_index: node_index_offset, node_b_index: node_index_offset + 1, node_c_index: node_index_offset + 2, r: 0.5, color });
+        faces.push(Face { node_a_index: node_index_offset, node_b_index: node_index_offset + 1, node_c_index: node_index_offset + 2, r: 0.5 });
 
         // Generate the new nodes
         face_vertices.iter().for_each(|vertex| nodes.push(Node { pos: *vertex, r: 0.0, color }));

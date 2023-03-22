@@ -191,6 +191,17 @@ impl ops::Add for Pos2D {
     }
 }
 
+impl ops::Sub for Pos2D {
+    type Output = Pos2D;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let x: f64 = self.x - rhs.x;
+        let y: f64 = self.y - rhs.y;
+
+        Self::Output { x, y }
+    }
+}
+
 impl ops::Mul<f64> for Pos2D {
     type Output = Pos2D;
 
