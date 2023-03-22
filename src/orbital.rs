@@ -6,14 +6,14 @@ mod lookup;
 use complex::Complex;
 
 use crate::{
-    pos::Pos4D,
+    pos::{Pos4D, Len},
     shapes::{
         Color::{self, Green, Purple},
         Edge, Face, Node, Object,
     }, 
     orbital::complex::{
-        AbsArg, Conjugate, Split, Exp
-    },
+        Split, Exp
+    }, Factorial,
 };
 
 fn cartesian_to_spherical(x: f64, y: f64, z: f64) -> (f64, f64, f64) {
@@ -32,17 +32,35 @@ fn _spherical_to_cartesian(r: f64, t: f64, p: f64) -> (f64, f64, f64) {
     (x, y, z)
 }
 
-fn radial_wave_function(n: i32, l: i32, r: f64, a: f64) -> Complex {
-    Complex(1.0, 0.0)
-        * match (n, l) {
-            (1, 0) => 1.0 / (1.0 * a).powi(3).sqrt() * 2.0 * (-r / a).exp(),
-            (2, 0) => 1.0 / (2.0 * a).powi(3).sqrt() * 2.0 * (1.0 - r / (2.0 * a)) * (-r / (2.0 * a)).exp(),
-            (2, 1) => 1.0 / (2.0 * a).powi(3).sqrt() * (r / (3.0_f64.sqrt() * a)) * (-r / (2.0 * a)).exp(),
-            (3, 0) => 1.0 / (3.0 * a).powi(3).sqrt() * (2.0 - 4.0 * r / (3.0 * a) + (4.0 * r * r) / (27.0 * a * a)) * (-r / (3.0 * a)).exp(),
-            (3, 1) => 1.0 / (3.0 * a).powi(3).sqrt() * (4.0 * 2.0_f64.sqrt() * r) / (9.0 * a) * (1.0 - r / (6.0 * a)) * (-r / (3.0 * a)).exp(),
-            (3, 2) => 1.0 / (3.0 * a).powi(3).sqrt() * (2.0 * 2.0_f64.sqrt() * r * r) / (27.0 * 5.0_f64.sqrt() * a * a) * (-r / (3.0 * a)).exp(),
-            _ => 0.0,
-        }
+fn psi(n: i32, l: i32, m: i32, r: f64, t: f64, p: f64, a: f64) -> Complex {
+    radial_wave_function(n, l, r, a) * angular_wave_function(l, m, t, p, a)
+}
+
+/// Calculates the radial part of the wave function, R(r) for a given n, l, m and bohr radius, a
+fn radial_wave_function(n: i32, l: i32, r: f64, a: f64) -> f64 {
+    // Complex(1.0, 0.0)
+    //     * match (n, l) {
+    //         (1, 0) => 1.0 / (1.0 * a).powi(3).sqrt() * 2.0 * (-r / a).exp(),
+    //         (2, 0) => 1.0 / (2.0 * a).powi(3).sqrt() * 2.0 * (1.0 - r / (2.0 * a)) * (-r / (2.0 * a)).exp(),
+    //         (2, 1) => 1.0 / (2.0 * a).powi(3).sqrt() * (r / (3.0_f64.sqrt() * a)) * (-r / (2.0 * a)).exp(),
+    //         (3, 0) => 1.0 / (3.0 * a).powi(3).sqrt() * (2.0 - 4.0 * r / (3.0 * a) + (4.0 * r * r) / (27.0 * a * a)) * (-r / (3.0 * a)).exp(),
+    //         (3, 1) => 1.0 / (3.0 * a).powi(3).sqrt() * (4.0 * 2.0_f64.sqrt() * r) / (9.0 * a) * (1.0 - r / (6.0 * a)) * (-r / (3.0 * a)).exp(),
+    //         (3, 2) => 1.0 / (3.0 * a).powi(3).sqrt() * (2.0 * 2.0_f64.sqrt() * r * r) / (27.0 * 5.0_f64.sqrt() * a * a) * (-r / (3.0 * a)).exp(),
+    //         _ => 0.0,
+    //     }
+    
+    // General radial wave function
+    (8.0 / (n as f64 * a).powi(3) * (n - l - 1).factorial() as f64 / (2 * n * (n + l).factorial()) as f64).sqrt() * (-r / (n as f64 * a)).exp() * (2.0 * r).powi(l) / (n as f64 * a).powi(l) * laguerre_polynomials(2 * l + 1, n - l - 1, (2.0 * r) / (n as f64 * a))
+}
+
+/// Calculates the generalised/associated laguerre polynomials (L^k_n (x))for a given k, n and x
+/// Uses the Rodrigues representation: https://mathworld.wolfram.com/AssociatedLaguerrePolynomial.html
+pub fn laguerre_polynomials(k: i32, n: i32, x: f64) -> f64 {
+    let mut result = 0.0;
+    for m in 0..=n {
+        result += (-1_i32).pow(m as u32) as f64 * (n + k).factorial() as f64 / ((n - m).factorial() * (k + m).factorial() * m.factorial()) as f64 * x.powi(m)
+    }
+    result
 }
 
 fn angular_wave_function(l: i32, m: i32, t: f64, p: f64, _a: f64) -> Complex {
@@ -101,7 +119,7 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
                 let psi = radial_wave_function(n, l, r, a)
                     * angular_wave_function(l, m, t, p, a);
 
-                psi_generated.insert((i, j, k), psi.Re());
+                psi_generated.insert((i, j, k), psi(n, l, m, r, t, p, a).Re() as f32);
             }
         }
     }
