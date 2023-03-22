@@ -85,19 +85,17 @@ fn angular_wave_function(l: i32, m: i32, t: f64, p: f64, _a: f64) -> Complex {
     }
 }
 
-fn adapt(start_value: f64, end_value: f64, cutoff: f64) -> f64 {
+fn adapt(start_value: f32, end_value: f32, cutoff: f32) -> f32 {
     (cutoff - start_value.abs()) / (end_value.abs() - start_value.abs())
 }
 
-pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f64) -> Object {
+pub fn create_orbital_v2(res: usize, psi_min: f32, max: f64, a: f64, (n, l, m): (i32, i32, i32)) -> Object {
     let mut nodes: Vec<Node> = Vec::new();
     let mut edges: Vec<Edge> = Vec::new();
     let mut faces: Vec<Face> = Vec::new();
 
-    let (n, l, m) = (3, 1, 0);
-
     // Generate psi for a number of points inside a cube
-    let mut psi_generated: HashMap<(usize, usize, usize), f64> = HashMap::new();
+    let mut psi_generated: HashMap<(usize, usize, usize), f32> = HashMap::new();
 
     for i in 0..res {
         println!(
@@ -116,8 +114,8 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
 
                 let (r, t, p): (f64, f64, f64) = cartesian_to_spherical(pos.x, pos.y, pos.z);
 
-                let psi = radial_wave_function(n, l, r, a)
-                    * angular_wave_function(l, m, t, p, a);
+                // let psi = radial_wave_function(n, l, r, a)
+                //     * angular_wave_function(l, m, t, p, a);
 
                 psi_generated.insert((i, j, k), psi(n, l, m, r, t, p, a).Re() as f32);
             }
@@ -152,7 +150,7 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
                 7 (i + 1  , j + 1 , k + 1 ), 0b1000_0000
                 */
 
-                // Store the values of psi of neighbouring nodes in an array
+                // Store the values of psi of neighbouring nodes in a smaller array
                 let local_psi_generated = [
                     *psi_generated.get(&(i, j, k)).unwrap_or(&0.0),
                     *psi_generated.get(&(i + 1, j, k)).unwrap_or(&0.0),
@@ -166,19 +164,23 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
 
                 let mut positive_byte: u8 = 0x0;
                 let mut negative_byte: u8 = 0x0;
-
                 // Encode the valid and invalid nodes of the cube into a byte
                 for (i, local_psi) in local_psi_generated.iter().enumerate() {
                     positive_byte ^= ((*local_psi >= psi_min) as u8) << i;
                     negative_byte ^= ((-*local_psi >= psi_min) as u8) << i;
                 }
 
-                fn run_marching_cubes(byte: u8, local_values: [f64; 8], node_index: usize, cutoff: f64, pos: Pos4D, color: Color, size: f64) -> (Vec<Node>, Vec<Edge>, Vec<Face>) {
+                /// Function to run the marching cubes algorithm for a single cube and add the resulting nodes edges and faces to the object, transform the vectors that were input
+                fn run_marching_cubes(byte: u8, local_values: [f32; 8], cutoff: f32, pos: Pos4D, color: Color, size: f64, mut nodes: Vec<Node>, mut edges: Vec<Edge>, mut faces: Vec<Face>) -> (Vec<Node>, Vec<Edge>, Vec<Face>) {
                     // Don't draw empty or filled cubes
                     if byte == 0x00 && byte == 0xff {return (Vec::new(), Vec::new(), Vec::new())};
 
-                    let (new_nodes, mut new_edges, mut new_faces) =
+                    // Get the new nodes from the marching cubes algoritm
+                    let (mut new_nodes, mut new_edges, mut new_faces) =
                         marching_cubes(local_values, cutoff, byte, pos, color, size);
+
+                    // Get the current node index, so the edges and faces can be updated and properly appended
+                    let node_index = nodes.len();
 
                     // Update the indices to match the new node indices
                     new_edges.iter_mut().for_each(|edge| {
@@ -191,19 +193,19 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
                         face.node_c_index += node_index;
                     });
 
-                    (new_nodes, new_edges, new_faces)
+                    // Append the nodes, edges and faces with the shifted indices to the total
+                    nodes.append(&mut new_nodes);
+                    edges.append(&mut new_edges);
+                    faces.append(&mut new_faces);
+
+                    (nodes, edges, faces)
                 }
 
-                let (mut new_nodes_neg, mut new_edges_neg, mut new_faces_neg) = run_marching_cubes(negative_byte, local_psi_generated, nodes.len(), psi_min, pos, Green, max / res as f64);
-                let (mut new_nodes_pos, mut new_edges_pos, mut new_faces_pos) = run_marching_cubes(positive_byte, local_psi_generated, nodes.len(), psi_min, pos, Purple, max / res as f64);
-                
-                // Append the new nodes, edges and faces to the total object
-                nodes.append(&mut new_nodes_neg);
-                nodes.append(&mut new_nodes_pos);
-                edges.append(&mut new_edges_neg);
-                edges.append(&mut new_edges_pos);
-                faces.append(&mut new_faces_neg);
-                faces.append(&mut new_faces_pos);
+                let colors = [Purple, Green];
+
+                for (i, &byte) in [positive_byte, negative_byte].iter().enumerate() {
+                    (nodes, edges, faces) = run_marching_cubes(byte, local_psi_generated, psi_min, pos, colors[i], max / res as f64, nodes, edges, faces);
+                }
             }
         }
     }
@@ -216,8 +218,8 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
 }
 
 fn marching_cubes(
-    value: [f64; 8],
-    cutoff: f64,
+    value: [f32; 8],
+    cutoff: f32,
     byte: u8,
     pos: Pos4D,
     color: Color,
@@ -258,14 +260,14 @@ fn marching_cubes(
     }
 
     // Move the position of the vertex to the cutoff point
-    fn edge_to_boundary_vertex(edge_index: i8, value: [f64; 8], cutoff: f64, pos: Pos4D, size: f64) -> Pos4D {
+    fn edge_to_boundary_vertex(edge_index: i8, value: [f32; 8], cutoff: f32, pos: Pos4D, size: f64) -> Pos4D {
         let [vertex_0_index, vertex_1_index] = lookup::EDGE_VERTEX_INDICES[edge_index as usize];
         let t0 = 1.0 - adapt(value[vertex_0_index as usize], value[vertex_1_index as usize], cutoff);
         let t1 = 1.0 - t0;
         let vertex_0_pos = lookup::VERTEX_RELATIVE_POSITION[vertex_0_index as usize] * size;
         let vertex_1_pos = lookup::VERTEX_RELATIVE_POSITION[vertex_1_index as usize] * size;
         
-        pos + vertex_0_pos * t0 + vertex_1_pos * t1
+        pos + vertex_0_pos * t0 as f64 + vertex_1_pos * t1 as f64 
     }
 
     (nodes, edges, faces)

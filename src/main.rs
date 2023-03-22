@@ -48,7 +48,7 @@ fn main() -> Result<(), Error> {
     // let mut shape = create_3_sphere(1000);
     // let mut shape = create_4_sphere(3200, 1.8);
     // let mut shape = create_orbital(1000, 1.0, 2.0, 0.1);
-    let mut shape: Object = create_orbital_v2(40, 0.1, f64::INFINITY, 0.2, 6.0);
+    let mut shape: Object = create_orbital_v2(50, 0.05, 10.0, 0.15, (4, 3, 1));
     // let mut shape = create_torus(100, 1.8);
     // let mut shape = empty();
 
