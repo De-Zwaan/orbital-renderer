@@ -6,7 +6,7 @@ mod lookup;
 use complex::Complex;
 
 use crate::{
-    pos::{Pos4D, Len},
+    pos::{Pos4D},
     shapes::{
         Color::{self, Green, Purple},
         Edge, Face, Node, Object,
@@ -209,6 +209,10 @@ pub fn create_orbital_v2(res: usize, psi_min: f32, max: f64, a: f64, (n, l, m): 
             }
         }
     }
+    
+    println!("Object contains {} points before optimisation...", nodes.len());
+    (nodes, edges, faces) = remove_duplicates(nodes, edges, faces, 0.01);
+    println!("Object contains {} points after optimisation...", nodes.len());
 
     Object {
         nodes,
@@ -271,4 +275,61 @@ fn marching_cubes(
     }
 
     (nodes, edges, faces)
+}
+
+fn remove_duplicates(nodes: Vec<Node>, edges: Vec<Edge>, faces: Vec<Face>, _threshold: f64) -> (Vec<Node>, Vec<Edge>, Vec<Face>) {
+    let mut unique_nodes: Vec<Node> = Vec::new();
+    let mut unique_edges: Vec<Edge> = Vec::new();
+    let mut unique_faces: Vec<Face> = Vec::new();
+
+    // Create a hashmap to store all duplicate vertices
+    let mut duplicated_nodes: HashMap<usize, usize> = HashMap::new();
+
+    for (old_index, &node) in nodes.iter().enumerate() {
+        let new_index = if !unique_nodes.contains(&node) {
+            unique_nodes.push(node);
+            unique_nodes.len() - 1
+        } else {
+            unique_nodes.iter().position(|&unique_node| unique_node == node).unwrap()
+        };
+        println!("Moved node from {} to {}", old_index, new_index);
+        duplicated_nodes.insert(old_index, new_index);
+    }
+
+    for edge in edges {
+        let mut unique_edge = edge.clone();
+        if duplicated_nodes.contains_key(&edge.start_node_index) {
+            unique_edge.start_node_index = *duplicated_nodes.get(&edge.start_node_index).unwrap();
+        }
+        if duplicated_nodes.contains_key(&edge.end_node_index) {
+            unique_edge.end_node_index = *duplicated_nodes.get(&edge.end_node_index).unwrap();
+        }
+
+        if unique_edge.start_node_index >= unique_nodes.len() || unique_edge.end_node_index >= unique_nodes.len() {
+            println!("{:?}", unique_edge)
+        } else {
+            unique_edges.push(unique_edge);
+        }
+    }
+
+    for face in faces {
+        let mut unique_face = face.clone();
+        if duplicated_nodes.contains_key(&face.node_a_index) {
+            unique_face.node_a_index = *duplicated_nodes.get(&face.node_a_index).unwrap();
+        }
+        if duplicated_nodes.contains_key(&face.node_b_index) {
+            unique_face.node_b_index = *duplicated_nodes.get(&face.node_b_index).unwrap();
+        }
+        if duplicated_nodes.contains_key(&face.node_c_index) {
+            unique_face.node_c_index = *duplicated_nodes.get(&face.node_c_index).unwrap();
+        }
+
+        if unique_face.node_a_index >= unique_nodes.len() || unique_face.node_b_index >= unique_nodes.len() || unique_face.node_c_index >= unique_nodes.len() {
+            println!("{:?}", unique_face)
+        } else {
+            unique_faces.push(unique_face)
+        }
+    }
+
+    (unique_nodes, unique_edges, unique_faces)
 }

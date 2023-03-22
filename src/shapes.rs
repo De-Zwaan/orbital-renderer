@@ -44,21 +44,27 @@ pub struct Object {
     pub faces: Vec<Face>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Node {
     pub pos: Pos4D,
     pub r: f64,
     pub color: Color,
 }
 
-#[derive(Clone, Copy)]
+impl PartialEq for Node {
+    fn eq(&self, other: &Self) -> bool {
+        (self.pos - other.pos).len() < 0.0001 && (self.r - other.r).abs() < 0.0001 && self.color == other.color
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct Edge {
     pub start_node_index: usize,
     pub end_node_index: usize,
     pub r: f64,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Face {
     pub node_a_index: usize,
     pub node_b_index: usize,
@@ -359,7 +365,7 @@ impl Render for Face {
 
                 let mut rgba: [u8; 4] = [0; 4];
                 for c in 0..=3 {
-                    rgba[c] = (a_color[c] as f64 + (b_color[c] - a_color[c]) as f64 * ((k1 as f64 + edge_offset) / resolution) + (c_color[c] - a_color[c]) as f64 * ((k2 as f64 + edge_offset) / resolution)) as u8
+                    rgba[c] = (a_color[c] as f64 + (b_color[c] as f64 - a_color[c] as f64) as f64 * ((k1 as f64 + edge_offset) / resolution) + (c_color[c] as f64 - a_color[c] as f64) as f64 * ((k2 as f64 + edge_offset) / resolution)) as u8
                 };
 
                 rgba[3] = alpha;
