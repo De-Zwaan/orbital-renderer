@@ -68,7 +68,11 @@ fn angular_wave_function(l: i32, m: i32, t: f64, p: f64, _a: f64) -> Complex {
 }
 
 fn adapt(start_value: f64, end_value: f64, cutoff: f64) -> f64 {
-    (cutoff - start_value.abs()) / (end_value.abs() - start_value.abs())
+    ((cutoff - start_value.abs()) / (end_value.abs() - start_value.abs())).clamp(0.0, 1.0)
+}
+
+fn psi((n, l, m): (i32, i32, i32), (r, t, p): (f64, f64, f64), a: f64) -> Complex {
+    radial_wave_function(n, l, r, a) * angular_wave_function(l, m, t, p, a)
 }
 
 pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f64) -> Object {
@@ -76,8 +80,11 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
     let mut edges: Vec<Edge> = Vec::new();
     let mut faces: Vec<Face> = Vec::new();
 
-    let (n, l, m) = (3, 1, 0);
-
+    let s = (2, 0, 0);
+    let pz = (2, 1, 0);
+    let px = (2, 1, 1);
+    let py = (2, 1, -1);
+    
     // Generate psi for a number of points inside a cube
     let mut psi_generated: HashMap<(usize, usize, usize), f64> = HashMap::new();
 
@@ -96,12 +103,15 @@ pub fn create_orbital_v2(res: usize, psi_min: f64, psi_max: f64, a: f64, max: f6
                     w: 0.0,
                 };
 
-                let (r, t, p): (f64, f64, f64) = cartesian_to_spherical(pos.x, pos.y, pos.z);
+                let sc: (f64, f64, f64) = cartesian_to_spherical(pos.x, pos.y, pos.z);
+                let sc_A: (f64, f64, f64) = cartesian_to_spherical(pos.x - 1.0, pos.y, pos.z);
+                let sc_B: (f64, f64, f64) = cartesian_to_spherical(pos.x + 1.0, pos.y, pos.z);
 
-                let psi = radial_wave_function(n, l, r, a)
-                    * angular_wave_function(l, m, t, p, a);
+                let psi_d = psi((3, 2, 0), sc, a);
+                let psi_A = psi(s, sc_A, a);
+                let psi_B = psi(s, sc_B, a);
 
-                psi_generated.insert((i, j, k), psi.Re());
+                psi_generated.insert((i, j, k), (psi_d).Re());
             }
         }
     }
