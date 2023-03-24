@@ -7,7 +7,7 @@ use crate::projection::Projection;
 use crate::shapes::Color::*;
 use crate::{matrix::*, print_coord_in_pixelbuffer};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Color {
     Red,
     Orange,
@@ -44,28 +44,32 @@ pub struct Object {
     pub faces: Vec<Face>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Node {
     pub pos: Pos4D,
     pub r: f64,
     pub color: Color,
 }
 
-#[derive(Clone, Copy)]
+impl PartialEq for Node {
+    fn eq(&self, other: &Self) -> bool {
+        (self.pos - other.pos).len() < 0.0001 && (self.r - other.r).abs() < 0.0001 && self.color == other.color
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub struct Edge {
     pub start_node_index: usize,
     pub end_node_index: usize,
     pub r: f64,
-    pub color: Color,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Face {
     pub node_a_index: usize,
     pub node_b_index: usize,
     pub node_c_index: usize,
     pub r: f64,
-    pub color: Color,
 }
 
 impl Object {
@@ -78,13 +82,13 @@ impl Object {
         projection: Projection,
     ) {
         // Iterate over all edges, vertices and faces of the object and draw them
-        self.edges.iter().for_each(|edge| {
-            edge.draw(&self.nodes, screen, size, projection, projection_scale);
-        });
+        // self.edges.iter().for_each(|edge| {
+        //     edge.draw(&self.nodes, screen, size, projection, projection_scale);
+        // });
 
-        self.nodes.iter().for_each(|node| {
-            node.draw(&self.nodes, screen, size, projection, projection_scale);
-        });
+        // self.nodes.iter().for_each(|node| {
+        //     node.draw(&self.nodes, screen, size, projection, projection_scale);
+        // });
 
         self.faces.iter().for_each(|face| {
             face.draw(&self.nodes, screen, size, projection, projection_scale);
@@ -241,22 +245,29 @@ impl Render for Edge {
         let start_point_r = scale(start_node.pos, to_camera) * self.r;
         let end_point_r = scale(end_node.pos, to_camera) * self.r;
 
-        // Set 1 / the amount of points that compose an edge
-        let resolution: f64 = 0.01;
+        // Set the amount of points that compose an edge based on the length of the edge on the screen
+        let resolution: f64 = (screen_end_point - screen_start_point).len();
 
-        let mut rgba = self.color.get_rgba();
-
-        for i in 0..=((1.0 / resolution) as i32) {
-            let x_p = (edge[0] * i as f64 * resolution) as i32 + screen_start_point.x as i32;
-            let y_p = (edge[1] * i as f64 * resolution) as i32 + screen_start_point.y as i32;
-
+        // Interpolate between the colors of the two nodes
+        let start_color = start_node.color.get_rgba();
+        let end_color = end_node.color.get_rgba();
+        
+        for i in 0..=(resolution as i32) {
+            let x_p = (edge[0] * i as f64 / resolution) as i32 + screen_start_point.x as i32;
+            let y_p = (edge[1] * i as f64 / resolution) as i32 + screen_start_point.y as i32;
+            
             // Interpolate the radius of the points making up the edges
             let r =
-                (((end_point_r - start_point_r) * i as f64 * resolution) + start_point_r) as i32;
+            (((end_point_r - start_point_r) * i as f64 / resolution) + start_point_r) as i32;
+            
+            let mut rgba: [u8; 4] = [0; 4];
+            for c in 0..=3 {
+                rgba[c] = (((end_color[c] - start_color[c]) as f64 * i as f64 / resolution) + start_color[c] as f64) as u8
+            };
 
             // Change the blue channel of the edge based on the w coordiante
             rgba[2] = (50.0
-                * (((end_node.pos.w - start_node.pos.w) * i as f64 * resolution
+                * (((end_node.pos.w - start_node.pos.w) * i as f64 / resolution
                     + start_node.pos.w)
                     + 2.5)) as u8;
 
@@ -307,13 +318,16 @@ impl Render for Face {
         let a_to_b: Pos2D = pos_b + (pos_a * -1.0);
         let a_to_c: Pos2D = pos_c + (pos_a * -1.0);
 
+        // Change the alpha channel based on the angle between the camera and the surface
+        let alpha = (255.0 * angle_to_camera.clamp(0.0, 1.0)) as u8;
+
+        // Get the colors from the three nodes of the face
+        let a_color = node_a.color.get_rgba();
+        let b_color = node_b.color.get_rgba();
+        let c_color = node_c.color.get_rgba();
+
         // Calculate the screen area of the face 
         let area = 0.5 * (Pos3D { x: a_to_b.x, y: a_to_b.y, z: 0.0 } ^ Pos3D { x: a_to_c.x, y: a_to_c.y, z: 0.0 }).len();
-
-        let mut rgba: [u8; 4] = self.color.get_rgba();
-
-        // Change the alpha channel based on the angle between the camera and the surface
-        rgba[3] = (255.0 * angle_to_camera.clamp(0.0, 1.0)) as u8;
 
         let resolution: f64 = angle_to_camera.clamp(0.001, 1.0) * area.sqrt();
 
@@ -338,16 +352,26 @@ impl Render for Face {
         //     Self::print_point(pos.x as i32, pos.y as i32, self.r as i32, screen, size, rgba)
         // }
 
+        // Amount of offset to add between the edges of the faces to avoid overlap
+        let edge_offset = 0.5;
+
         // Iterate over points on the surface of the face and print them to the screen
         for k1 in 0..=((resolution) as i32) {
             for k2 in 0..=((resolution) as i32) {
                 // Make sure it is a point on the triangle
-                if k1 as f64 / resolution + k2 as f64 / resolution > 1.0 {
+                if (k1 as f64 + edge_offset) / resolution + (k2 as f64 + edge_offset) / resolution > 1.0 {
                     break;
                 }
 
+                let mut rgba: [u8; 4] = [0; 4];
+                for c in 0..=3 {
+                    rgba[c] = (a_color[c] as f64 + (b_color[c] as f64 - a_color[c] as f64) as f64 * ((k1 as f64 + edge_offset) / resolution) + (c_color[c] as f64 - a_color[c] as f64) as f64 * ((k2 as f64 + edge_offset) / resolution)) as u8
+                };
+
+                rgba[3] = alpha;
+
                 let p =
-                    pos_a + a_to_b * (k1 as f64 / resolution) + a_to_c * (k2 as f64 / resolution);
+                    pos_a + a_to_b * ((k1 as f64 + edge_offset) / resolution) + a_to_c * ((k2 as f64 + edge_offset) / resolution);
 
                 Self::print_point(p.x as i32, p.y as i32, self.r as i32, screen, size, rgba);
             }
@@ -519,73 +543,61 @@ pub fn create_3_cube(r: f64) -> Object {
                 start_node_index: 0,
                 end_node_index: 1,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 0,
                 end_node_index: 2,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 0,
                 end_node_index: 4,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 3,
                 end_node_index: 1,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 3,
                 end_node_index: 2,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 3,
                 end_node_index: 7,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 5,
                 end_node_index: 1,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 5,
                 end_node_index: 4,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 5,
                 end_node_index: 7,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 6,
                 end_node_index: 2,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 6,
                 end_node_index: 4,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 6,
                 end_node_index: 7,
                 r: 1.0,
-                color: Purple,
             },
         ],
         faces: vec![
@@ -594,84 +606,72 @@ pub fn create_3_cube(r: f64) -> Object {
                 node_b_index: 1,
                 node_c_index: 4,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 0,
                 node_b_index: 4,
                 node_c_index: 2,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 0,
                 node_b_index: 2,
                 node_c_index: 1,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 3,
                 node_b_index: 1,
                 node_c_index: 2,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 3,
                 node_b_index: 2,
                 node_c_index: 7,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 3,
                 node_b_index: 7,
                 node_c_index: 1,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 5,
                 node_b_index: 1,
                 node_c_index: 7,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 5,
                 node_b_index: 4,
                 node_c_index: 1,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 5,
                 node_b_index: 7,
                 node_c_index: 4,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 6,
                 node_b_index: 2,
                 node_c_index: 4,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 6,
                 node_b_index: 4,
                 node_c_index: 7,
                 r: 1.0,
-                color: Yellow,
             },
             Face {
                 node_a_index: 6,
                 node_b_index: 7,
                 node_c_index: 2,
                 r: 1.0,
-                color: Yellow,
             },
         ],
     }
@@ -865,193 +865,161 @@ pub fn create_4_cube(r: f64) -> Object {
                 start_node_index: 0,
                 end_node_index: 1,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 0,
                 end_node_index: 2,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 0,
                 end_node_index: 4,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 0,
                 end_node_index: 8,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 3,
                 end_node_index: 1,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 3,
                 end_node_index: 2,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 3,
                 end_node_index: 7,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 3,
                 end_node_index: 11,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 5,
                 end_node_index: 1,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 5,
                 end_node_index: 4,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 5,
                 end_node_index: 7,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 5,
                 end_node_index: 13,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 6,
                 end_node_index: 2,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 6,
                 end_node_index: 4,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 6,
                 end_node_index: 7,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 6,
                 end_node_index: 14,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 9,
                 end_node_index: 1,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 9,
                 end_node_index: 8,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 9,
                 end_node_index: 11,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 9,
                 end_node_index: 13,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 10,
                 end_node_index: 2,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 10,
                 end_node_index: 8,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 10,
                 end_node_index: 11,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 10,
                 end_node_index: 14,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 12,
                 end_node_index: 4,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 12,
                 end_node_index: 8,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 12,
                 end_node_index: 13,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 12,
                 end_node_index: 14,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 15,
                 end_node_index: 7,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 15,
                 end_node_index: 11,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 15,
                 end_node_index: 13,
                 r: 1.0,
-                color: Purple,
             },
             Edge {
                 start_node_index: 15,
                 end_node_index: 14,
                 r: 1.0,
-                color: Purple,
             },
         ],
         faces: Vec::new(),

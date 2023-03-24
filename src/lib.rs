@@ -26,3 +26,21 @@ pub fn print_coord_in_pixelbuffer(
         }
     }
 }
+
+pub trait Factorial {
+    type Output;
+
+    fn factorial(self) -> Self::Output;
+}
+
+impl Factorial for i32 {
+    type Output = i32;
+
+    fn factorial(self) -> Self::Output {
+        if self <= 1 {
+            1
+        } else {
+            self * (self - 1).factorial()
+        }
+    }
+}
