@@ -152,10 +152,9 @@ impl AbsArg for Complex {
     }
 
     fn arg(self) -> Self::Output {
-        self.0.atan2(self.1)
+        self.1.atan2(self.0)
     }
 }
-
 pub trait Conjugate {
     type Output;
 

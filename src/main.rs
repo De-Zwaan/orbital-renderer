@@ -10,10 +10,11 @@ use winit::{
 };
 
 // Actual rendering code
-use simple_graphics::{orbital::create_orbital_v2, pos::RotationPlane, shapes::*};
+use n_renderer::{render::{Object, Transform}, pos::{RotationPlane}, projection::Projection::*};
+use orbital_renderer::orbital::create_orbital;
 
-const WIDTH: u32 = 1000;
-const HEIGHT: u32 = 1000;
+const WIDTH: u32 = 800;
+const HEIGHT: u32 = 800;
 
 const SCALE: f64 = 200.0;
 
@@ -40,19 +41,10 @@ fn main() -> Result<(), Error> {
 
     // Create a pixelarray
     let mut pixels: pixels::Pixels = PixelsBuilder::new(WIDTH, HEIGHT, surface_texture).build()?;
+    
+    let mut shape: Object = create_orbital(100, 0.1, 5.0, 0.05, (4, 3, 1));
 
-    // let mut t: u64 = 0;
-
-    // let mut shape = create_3_cube(1.0);
-    // let mut shape = create_4_cube(1.0);
-    // let mut shape = create_3_sphere(1000);
-    // let mut shape = create_4_sphere(3200, 1.8);
-    // let mut shape = create_orbital(1000, 1.0, 2.0, 0.1);
-    let mut shape: Object = create_orbital_v2(50, 0.05, 8.0, 0.15, (4, 3, 1));
-    // let mut shape = create_torus(100, 1.8);
-    // let mut shape = empty();
-
-    shape.scale(0.3);
+    shape.scale(2.0);
 
     event_loop.run(move |event, _, control_flow| {
         control_flow.set_poll();
@@ -66,18 +58,17 @@ fn main() -> Result<(), Error> {
                 control_flow.set_exit();
             }
             Event::WindowEvent {
-                event: WindowEvent::Resized(new_size),
+                event: WindowEvent::Resized(_),
                 ..
             } => {
                 // println!("Window resized");
-                pixels.resize_buffer(new_size.width, new_size.height);
-                pixels.resize_surface(new_size.width, new_size.height);
+                // pixels.resize_buffer(new_size.width, new_size.height);
+                // pixels.resize_surface(new_size.width, new_size.height);
             }
             Event::MainEventsCleared => {
                 window.request_redraw();
             }
             Event::RedrawRequested(_) => {
-                // t += 1;
 
                 let screen = pixels.get_frame();
 
@@ -94,7 +85,7 @@ fn main() -> Result<(), Error> {
                     screen,
                     window.inner_size(),
                     SCALE,
-                    simple_graphics::projection::Projection::Perspective,
+                    Perspective,
                 );
 
                 // Display the result on the screen
