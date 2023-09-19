@@ -13,8 +13,8 @@ use winit::{
 use n_renderer::{render::{Object, Transform}, pos::{RotationPlane}, projection::Projection::*};
 use orbital_renderer::orbital::create_orbital;
 
-const WIDTH: u32 = 800;
-const HEIGHT: u32 = 800;
+const WIDTH: usize = 800;
+const HEIGHT: usize = 800;
 
 const SCALE: f64 = 200.0;
 
@@ -24,11 +24,8 @@ fn main() -> Result<(), Error> {
     // Initialise the window
     let window = WindowBuilder::new()
         .with_title("Spinny Spinny")
-        // .with_decorations(false)
-        .with_transparent(true)
-        .with_always_on_top(true)
-        .with_inner_size(LogicalSize::new(WIDTH, HEIGHT))
         .with_resizable(false)
+        .with_inner_size(LogicalSize::new(WIDTH as u32, HEIGHT as u32))
         .build(&event_loop)
         .unwrap();
 
@@ -40,7 +37,7 @@ fn main() -> Result<(), Error> {
     );
 
     // Create a pixelarray
-    let mut pixels: pixels::Pixels = PixelsBuilder::new(WIDTH, HEIGHT, surface_texture).build()?;
+    let mut pixels: pixels::Pixels = PixelsBuilder::new(WIDTH as u32, HEIGHT as u32, surface_texture).build()?;
     
     let mut shape: Object = create_orbital(100, 0.1, 5.0, 0.05, (4, 3, 1));
 
@@ -58,19 +55,20 @@ fn main() -> Result<(), Error> {
                 control_flow.set_exit();
             }
             Event::WindowEvent {
-                event: WindowEvent::Resized(_),
+                event: WindowEvent::Resized(new_size),
                 ..
             } => {
                 // println!("Window resized");
-                // pixels.resize_buffer(new_size.width, new_size.height);
-                // pixels.resize_surface(new_size.width, new_size.height);
+                let _ = pixels.resize_buffer(new_size.width, new_size.height);
+                let _ = pixels.resize_surface(new_size.width, new_size.height);
             }
             Event::MainEventsCleared => {
                 window.request_redraw();
             }
             Event::RedrawRequested(_) => {
 
-                let screen = pixels.get_frame();
+                let screen = pixels.frame_mut();
+                let mut depth_buffer: [Option<f32>; WIDTH * HEIGHT] = [None; WIDTH * HEIGHT];
 
                 // Create an empty pixelbuffer to render to
                 screen.chunks_exact_mut(4).for_each(|p| {
@@ -83,6 +81,7 @@ fn main() -> Result<(), Error> {
                 // Draw the object
                 shape.draw(
                     screen,
+                    &mut depth_buffer,
                     window.inner_size(),
                     SCALE,
                     Perspective,

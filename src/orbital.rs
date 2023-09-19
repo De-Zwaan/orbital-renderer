@@ -283,7 +283,7 @@ fn marching_cubes(
 
         // Generate the new nodes
         face_vertices_values.iter().for_each(|&(vertex, value)| nodes.push(Node { pos: vertex, r: 0.0, color: {
-            hue_to_rgb(value.arg() + PI, 0.5, 0.7)
+            hue_to_rgb(value.arg() + PI, 0.8, 0.7)
         }}));
     }
 
