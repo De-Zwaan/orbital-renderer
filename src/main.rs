@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 // Crates for window managment
 use pixels::{Error, PixelsBuilder, SurfaceTexture};
@@ -10,13 +10,13 @@ use winit::{
 };
 
 // Actual rendering code
-use n_renderer::{render::{Object, Transform}, pos::{RotationPlane}, projection::Projection::*};
+use n_renderer::{render::{Object, Transform}, pos::RotationPlane, projection::Projection::*};
 use orbital_renderer::orbital::create_orbital;
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 800;
 
-const SCALE: f64 = 200.0;
+const SCALE: f32 = 200.0;
 
 fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
@@ -39,11 +39,11 @@ fn main() -> Result<(), Error> {
     // Create a pixelarray
     let mut pixels: pixels::Pixels = PixelsBuilder::new(WIDTH as u32, HEIGHT as u32, surface_texture).build()?;
     
-    let mut shape: Object = create_orbital(100, 0.1, 5.0, 0.05, (4, 3, 1));
+    let mut shape: Object = create_orbital(80, 0.1, 5.0, 0.05, (4, 2, 1));
 
-    shape.scale(2.0);
+    shape.scale(1.0);
 
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move | event, _, control_flow| {
         control_flow.set_poll();
 
         match event {

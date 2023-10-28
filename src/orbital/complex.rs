@@ -1,20 +1,21 @@
 use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Clone, Copy, Debug)]
-pub struct Complex(pub f64, pub f64);
+pub struct Complex(pub f32, pub f32);
 
 #[allow(non_snake_case)]
 pub trait Split {
-    fn Re(self) -> f64;
-    fn Im(self) -> f64;
+    fn Re(self) -> f32;
+    fn Im(self) -> f32;
 }
 
+#[allow(non_snake_case)]
 impl Split for Complex {
-    fn Re(self) -> f64 {
+    fn Re(self) -> f32 {
         self.0
     }
 
-    fn Im(self) -> f64 {
+    fn Im(self) -> f32 {
         self.1
     }
 }
@@ -27,15 +28,15 @@ impl Add for Complex {
     }
 }
 
-impl Add<f64> for Complex {
+impl Add<f32> for Complex {
     type Output = Complex;
 
-    fn add(self, rhs: f64) -> Self::Output {
+    fn add(self, rhs: f32) -> Self::Output {
         Complex(self.0 + rhs, self.1)
     }
 }
 
-impl Add<Complex> for f64 {
+impl Add<Complex> for f32 {
     type Output = Complex;
 
     fn add(self, rhs: Complex) -> Self::Output {
@@ -51,15 +52,15 @@ impl Sub for Complex {
     }
 }
 
-impl Sub<f64> for Complex {
+impl Sub<f32> for Complex {
     type Output = Complex;
 
-    fn sub(self, rhs: f64) -> Self::Output {
+    fn sub(self, rhs: f32) -> Self::Output {
         Complex(self.0 - rhs, self.1)
     }
 }
 
-impl Sub<Complex> for f64 {
+impl Sub<Complex> for f32 {
     type Output = Complex;
 
     fn sub(self, rhs: Complex) -> Self::Output {
@@ -78,15 +79,15 @@ impl Mul for Complex {
     }
 }
 
-impl Mul<f64> for Complex {
+impl Mul<f32> for Complex {
     type Output = Complex;
 
-    fn mul(self, rhs: f64) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         Complex(self.0 * rhs, self.1 * rhs)
     }
 }
 
-impl Mul<Complex> for f64 {
+impl Mul<Complex> for f32 {
     type Output = Complex;
 
     fn mul(self, rhs: Complex) -> Self::Output {
@@ -105,15 +106,15 @@ impl Div for Complex {
     }
 }
 
-impl Div<f64> for Complex {
+impl Div<f32> for Complex {
     type Output = Complex;
 
-    fn div(self, rhs: f64) -> Self::Output {
+    fn div(self, rhs: f32) -> Self::Output {
         Complex(self.0 / rhs, self.1 / rhs)
     }
 }
 
-impl Div<Complex> for f64 {
+impl Div<Complex> for f32 {
     type Output = Complex;
 
     fn div(self, rhs: Complex) -> Self::Output {
@@ -145,7 +146,7 @@ pub trait AbsArg {
 }
 
 impl AbsArg for Complex {
-    type Output = f64;
+    type Output = f32;
 
     fn abs(self) -> Self::Output {
         (self.0 * self.0 + self.1 * self.1).sqrt()
