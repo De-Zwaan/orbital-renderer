@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# n_renderer = { git = "https://github.com/De-Zwaan/n-Renderer.git" }
-n_renderer = { path = "../n-Renderer"}
+n_renderer = { git = "https://github.com/De-Zwaan/n-Renderer.git" }
+# n_renderer = { path = "../n-Renderer"}
 pixels = "0.13.0"
 winit = "0.28.6"
 
