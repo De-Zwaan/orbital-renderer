@@ -287,33 +287,9 @@ fn marching_cubes(
         faces.push(Face { node_a_index: node_index_offset, node_b_index: node_index_offset + 1, node_c_index: node_index_offset + 2, r: 15 });
 
         // Generate the new nodes
-        face_vertices_values.iter().for_each(|&(vertex, value)| nodes.push(Node { pos: vertex, r: 0.0, color: {
-            hue_to_rgb(value.arg() + PI, 0.8, 0.7)
+        face_vertices_values.iter().for_each(|&(vertex, value)| nodes.push(Node { pos: vertex, r: 0, color: {
+            Color::HSV((value.arg() / PI * 180.0 + 180.0) as u16, (0.8 * 256.0) as u8, (0.7 * 256.0) as u8)
         }}));
-    }
-
-    fn hue_to_rgb(h: f64, s: f64, v: f64) -> Color {
-        let region = 3.0 * h / PI;
-        let c = v * s;
-        let x = c * (1.0 - (region % 2.0 - 1.0).abs());
-
-        let (r, g, b) = {
-            if (0.0..1.0).contains(&region) {
-                (c, x, 0.0)
-            } else if (1.0..2.0).contains(&region) {
-                (x, c, 0.0)
-            } else if (2.0..3.0).contains(&region) {
-                (0.0, c, x)
-            } else if (3.0..4.0).contains(&region) {
-                (0.0, x, c)
-            } else if (4.0..5.0).contains(&region) {
-                (x, 0.0, c)
-            } else {
-                (c, 0.0, x)
-            }
-        };
-
-        Color::RGB(((r + (v - c)) * 255.0).clamp(0.0, 255.0) as u8, ((g + (v - c)) * 255.0).clamp(0.0, 255.0) as u8, ((b + (v - c)) * 255.0).clamp(0.0, 255.0) as u8)
     }
 
     // Move the position of the vertex to the cutoff point
