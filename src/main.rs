@@ -39,9 +39,8 @@ fn main() -> Result<(), EventLoopError> {
     // Create a pixelarray
     let mut pixels: pixels::Pixels = PixelsBuilder::new(WIDTH as u32, HEIGHT as u32, surface_texture).build().unwrap();
     
-    let mut shape: Object = create_orbital(80, 0.1, 5.0, 0.05, (4, 2, 1));
-
-    shape.scale(1.0);
+    // Generate shape
+    let mut shape: Object = create_orbital(100, 0.1, 5.0, 0.05, (4, 2, 1));
 
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
     event_loop.run(move | event, control_flow| {
@@ -53,14 +52,14 @@ fn main() -> Result<(), EventLoopError> {
                 // println!("Window closed");
                 control_flow.exit();
             },
-            // Event::WindowEvent {
-            //     event: WindowEvent::Resized(new_size),
-            //     ..
-            // } => {
-            //     // println!("Window resized");
-            //     let _ = pixels.resize_buffer(new_size.width, new_size.height);
-            //     let _ = pixels.resize_surface(new_size.width, new_size.height);
-            // },
+            Event::WindowEvent {
+                event: WindowEvent::Resized(new_size),
+                ..
+            } => {
+                // println!("Window resized");
+                let _ = pixels.resize_buffer(new_size.width, new_size.height);
+                let _ = pixels.resize_surface(new_size.width, new_size.height);
+            },
             Event::AboutToWait => {
                 window.request_redraw();
             },
@@ -68,25 +67,18 @@ fn main() -> Result<(), EventLoopError> {
                 event: WindowEvent::RedrawRequested,
                 ..
             } => {
-                let screen = pixels.frame_mut();
-                let mut depth_buffer: [Option<f32>; WIDTH * HEIGHT] = [None; WIDTH * HEIGHT];
-
-                // Create an empty pixelbuffer to render to
-                screen.chunks_exact_mut(4).for_each(|p| {
-                    p.copy_from_slice(&[0x00, 0x00, 0x00, 0x00]);
-                });
+                let screen = vec![0x00; 4 * WIDTH * HEIGHT];
+                let depth_buffer = vec![None; WIDTH * HEIGHT];
 
                 // Transform the object
-                shape.rotate(RotationPlane::get_rot_mat_4d(RotationPlane::XZ, PI / 256.0));
+                shape.rotate(RotationPlane::get_rot_mat_4d(RotationPlane::XZ, PI / 512.0));
+                // let mut slice1 = shape.slice();
+                // slice1.rotate(RotationPlane::get_rot_mat_4d(RotationPlane::XZ, PI / 2.0));
 
                 // Draw the object
-                shape.draw(
-                    screen,
-                    &mut depth_buffer,
-                    window.inner_size(),
-                    SCALE,
-                    Perspective,
-                );
+                let (screen, _depth_buffer) = shape.draw(screen, depth_buffer, window.inner_size(), SCALE, Perspective);
+            
+                pixels.frame_mut().clone_from_slice(screen.as_slice());
 
                 // Display the result on the screen
                 if pixels

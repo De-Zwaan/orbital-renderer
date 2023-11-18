@@ -1,8 +1,5 @@
 use std::{
-    collections::{
-        HashMap, 
-        HashSet
-    }, 
+    collections::HashMap, 
     f32::consts::PI
 };
 
@@ -10,7 +7,7 @@ mod complex;
 mod lookup;
 
 use complex::Complex;
-use n_renderer::{render::{Node, Edge, Face, Object, Color}, pos::Pos4D};
+use n_renderer::{render::{Node, Edge, Face, Object, Color}, pos::Pos4D, remove_duplicates};
 
 use crate::orbital::complex::{Split, Exp, AbsArg};
 
@@ -237,14 +234,13 @@ pub fn create_orbital(res: usize, psi_min: f32, max: f32, a: f32, (n, l, m): (i3
     }
     
     println!("Object contains {} points before optimisation...", nodes.len());
-    (nodes, edges, faces) = remove_duplicates(nodes, edges, faces, 0.01);
-    println!("Object contains {} points after optimisation...", nodes.len());
-
-    Object {
+    let object = remove_duplicates(Object {
         nodes,
         edges,
         faces,
-    }
+    });
+    println!("Object contains {} points after optimisation...", object.nodes.len());
+    object
 }
 
 fn marching_cubes(
@@ -314,71 +310,4 @@ fn marching_cubes(
     }
 
     (nodes, edges, faces)
-}
-
-fn remove_duplicates(nodes: Vec<Node>, edges: Vec<Edge>, faces: Vec<Face>, _threshold: f32) -> (Vec<Node>, Vec<Edge>, Vec<Face>) {
-    let mut unique_nodes: HashMap<Node, usize> = HashMap::new();
-
-    let mut remapped_edges: HashSet<Edge> = HashSet::new();
-    let mut remapped_faces: HashSet<Face> = HashSet::new();
-
-    // Create a hashmap to store the remap between indices
-    let mut nodes_remap: HashMap<usize, usize> = HashMap::new();
-    
-    nodes.into_iter().enumerate().for_each(|(orig_index, node)| {
-        let new_index = if let Some(&index) = unique_nodes.get(&node) {
-            index
-        } else {
-            unique_nodes.insert(node, unique_nodes.len());
-            unique_nodes.len() - 1
-        };
-
-        nodes_remap.insert(orig_index, new_index);
-    });
-
-    // Adjust the node indices of the edges
-    for mut edge in edges {
-        if let Some(&new_index) = nodes_remap.get(&edge.start_node_index) {   
-            edge.start_node_index = new_index;
-        }
-
-        if let Some(&new_index) = nodes_remap.get(&edge.end_node_index) {
-            edge.end_node_index = new_index;
-        }
-
-        if edge.start_node_index >= unique_nodes.len() || edge.end_node_index >= unique_nodes.len() {
-            println!("{:?}", edge)
-        } else {
-            remapped_edges.insert(edge);
-        }
-    }
-
-    // Adjust the node indices of the faces
-    for mut face in faces {
-        if let Some(&new_index) = nodes_remap.get(&face.node_a_index) {
-            face.node_a_index = new_index;
-        }
-
-        if let Some(&new_index) = nodes_remap.get(&face.node_b_index) {
-            face.node_b_index = new_index;
-        }
-
-        if let Some(&new_index) = nodes_remap.get(&face.node_c_index) {
-            face.node_c_index = new_index;
-        }
-
-        if face.node_a_index >= unique_nodes.len() || face.node_b_index >= unique_nodes.len() || face.node_c_index >= unique_nodes.len() {
-            println!("{:?}", face)
-        } else {
-            remapped_faces.insert(face);
-        }
-    }
-
-    let mut unique_nodes_vec = vec![Node {pos: Pos4D { x: 0.0, y: 0.0, z: 0.0, w: 0.0 }, color: Color::White, r: 0}; unique_nodes.len()];
-
-    unique_nodes.drain().for_each(|(node, index)| {
-        unique_nodes_vec[index] = node;
-    });
-
-    (unique_nodes_vec, remapped_edges.drain().collect(), remapped_faces.drain().collect())
 }
