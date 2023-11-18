@@ -10,7 +10,7 @@ use winit::{
 };
 
 // Actual rendering code
-use n_renderer::{render::{Object, Transform}, pos::RotationPlane, projection::Projection::*};
+use n_renderer::{render::Object, pos::RotationPlane, projection::Projection::*, transform::Transform};
 use orbital_renderer::orbital::create_orbital;
 
 const WIDTH: usize = 800;
@@ -38,10 +38,10 @@ fn main() -> Result<(), EventLoopError> {
 
     // Create a pixelarray
     let mut pixels: pixels::Pixels = PixelsBuilder::new(WIDTH as u32, HEIGHT as u32, surface_texture).build().unwrap();
-    
+
     // Generate shape
     let mut shape: Object = create_orbital(100, 0.1, 5.0, 0.05, (4, 2, 1));
-
+        
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
     event_loop.run(move | event, control_flow| {
         match event {
