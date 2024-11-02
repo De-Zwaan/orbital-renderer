@@ -169,3 +169,16 @@ impl Conjugate for Complex {
         Complex(self.0, -self.1)
     }
 }
+
+impl std::hash::Hash for Complex {
+    fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
+        todo!()
+    }
+
+    fn hash_slice<H: std::hash::Hasher>(_data: &[Self], _state: &mut H)
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+}
