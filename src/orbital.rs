@@ -1,10 +1,10 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, rc::Rc};
 
 pub mod complex;
 pub mod lookup;
 
 use complex::{AbsArg, Complex, Exp, Split};
-use n_renderer::{object::Object, pos::Pos3D, remove_duplicates, transform::Transform};
+use n_renderer::{object::Object, pos::Pos3D, transform::Transform};
 
 use crate::marching_cubes::run_marching_cubes;
 
@@ -28,11 +28,8 @@ impl Factorial for i32 {
 
 fn cartesian_to_spherical(x: f32, y: f32, z: f32) -> (f32, f32, f32) {
     let r = (x * x + z * z + y * y).sqrt();
-    let r_nz = if r == 0.0 { 0.0001 } else { r };
-    let t = (y / r_nz).acos();
-    let xz_dist = (x * x + z * z).sqrt();
-    let xz_dist_nz = if xz_dist == 0.0 { 0.0001 } else { xz_dist };
-    let p = y.signum() * (z / xz_dist_nz).acos();
+    let t = if r == 0.0 { 0.0 } else { (z / r).acos() };
+    let p = y.atan2(x);
 
     (r, t, p)
 }
@@ -84,7 +81,7 @@ fn spherical_harmonic(l: i32, m: i32, t: f32, p: f32) -> Complex {
     assert!( l >= m, "-l <= m <= l");
 
     let norm = spherical_harmonic_normalization(l, m);
-    let legendre = legendre_polynomial(l, m, t.cos());
+    let legendre = legendre_polynomial(l, m, t);
     let phase = Complex(0.0, m as f32 * p).exp();
 
     norm * legendre * phase
@@ -104,12 +101,12 @@ fn positive_legendre_polynomial(l: i32, m: i32, x: f32) -> f32 {
         }).sum::<f32>()
 }
 
-fn legendre_polynomial(l: i32, m: i32, x: f32) -> f32 {
+fn legendre_polynomial(l: i32, m: i32, t: f32) -> f32 {
     if l >= 0 && m >= 0 {
-        positive_legendre_polynomial(l, m, x)
+        positive_legendre_polynomial(l, m, t.cos())
     } else if m < 0 {
         (-1.0_f32).powi(-m) * (l + m).factorial() as f32 / (l - m).factorial() as f32
-        * positive_legendre_polynomial(l, -m, x)
+        * positive_legendre_polynomial(l, -m, t.cos())
     } else {
         0.0
     }
@@ -152,42 +149,25 @@ pub fn create_orbital((n, l, m): (i32, i32, i32), res: usize, min: f32, a: f32) 
     // let sp3_1 = Complex(0.5, 0.0) * (psi_s + psi_x + psi_y + psi_z);
     //Complex(0.5, 0.0) * (psi_s(x, y, z) + psi_x(x, y, z) + psi_y(x, y, z) + psi_z(x, y, z))
     
-    let function = |x: f32, y: f32, z: f32| {
+    let function = move |x: f32, y: f32, z: f32| {
         psi((n, l, m), a)(x, y, z).Re() * Complex(1.0, 0.0)
     };
     generate_orbital(function, res, min)
 }
 
 fn generate_orbital(
-    func: impl Fn(f32, f32, f32) -> Complex,
+    func: impl Fn(f32, f32, f32) -> Complex + 'static,
     res: usize,
     min: f32,
 ) -> Object<Pos3D> {
     // Scale down the cube based on the resolution
-    let normalized_func = move |pos: Pos3D| -> Complex {
+    let normalized_func = Rc::new(move |pos: Pos3D| -> Complex {
         func(pos.x / res as f32, pos.y / res as f32, pos.z / res as f32)
-    };
+    });
 
+    // Define the cutoff function
     let cutoff = move |q: Complex| q.abs() >= min;
 
     // Actually run the marching cube algorithm
-    let (nodes, faces) = run_marching_cubes(normalized_func, (res, res, res), cutoff);
-
-    // Assemble the object from thom the vertices/faces resulting from the algorithm
-    let object = Object { nodes, faces };
-
-    // Remove duplicate vertices to reduce the performance impact
-    println!(
-        "Object contains {} points before optimisation...",
-        object.nodes.len()
-    );
-    let object = remove_duplicates(object);
-    println!(
-        "Object contains {} points after optimisation...",
-        object.nodes.len()
-    );
-    let object = object
-        .scale(1.0 / res as f32);
-
-    object
+    run_marching_cubes(normalized_func, (res, res, res), &cutoff).scale(1.0 / res as f32)
 }

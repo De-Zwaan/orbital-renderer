@@ -1,27 +1,49 @@
 use std::{
-    f32::consts::PI,
-    ops::{Add, Mul},
+    collections::HashMap, f32::consts::PI, hash::Hash, ops::{Add, Mul}, rc::Rc
 };
 
 use n_renderer::{
-    object::{Face, Node},
-    pos::Pos3D,
-    render::Color,
-    transform::Transform,
+    object::{Face, Node, Object}, pos::Pos3D, remove_duplicates, render::Color, transform::Transform
 };
 
 use crate::orbital::{complex::AbsArg, lookup};
+
+struct FunctionResultCache<T,U> {
+    function: Rc<dyn Fn(T) -> U>,
+    cache: HashMap<T, U>,
+}
+
+impl<T, U> FunctionResultCache<T, U> where T: Hash + Eq + Clone, U: Clone {
+    pub fn new(function: Rc<dyn Fn(T) -> U>) -> Self {
+        Self {
+            function, 
+            cache: HashMap::new(),
+        }
+    }
+
+    pub fn get(&mut self, arg: T) -> U {
+        if let Some(result) = self.cache.get(&arg) {
+            result.clone()
+        } else {
+            let result = (self.function)(arg.clone());
+            self.cache.insert(arg, result.clone());
+            result
+        }
+    }
+}
 
 /// Function to run the marching cubes algorithm for a single cube and add the resulting nodes edges and faces to the object, transform the vectors that were input
 pub fn run_marching_cubes<
     T: AbsArg<Output = f32> + Copy + Mul<f32, Output = T> + Add<Output = T>,
 >(
-    func: impl Fn(Pos3D) -> T,
+    func: Rc<dyn Fn(Pos3D) -> T>,
     limits: (usize, usize, usize),
-    cutoff: impl Fn(T) -> bool,
-) -> (Vec<Node<Pos3D>>, Vec<Face>) {
+    cutoff: &dyn Fn(T) -> bool,
+) -> Object<Pos3D> {
     let mut nodes = Vec::with_capacity(limits.0 * limits.1 * limits.2 * 12);
     let mut faces = Vec::with_capacity(limits.0 * limits.1 * limits.2 * 3);
+
+    let mut cached_function = FunctionResultCache::new(func.clone());
 
     for i in -(limits.0 as isize)..=limits.0 as isize {
         for j in -(limits.1 as isize)..=limits.1 as isize {
@@ -32,10 +54,11 @@ pub fn run_marching_cubes<
                     y: j as f32,
                     z: k as f32,
                 };
-                let local_func = |pos: Pos3D| func(pos + offset);
+
+                let mut local_func = |pos: Pos3D| cached_function.get(pos + offset);
 
                 // Get the new nodes from the marching cubes algoritm
-                let (mut new_nodes, mut new_faces) = marching_cubes(&local_func, &cutoff);
+                let (mut new_nodes, mut new_faces) = marching_cubes(&mut local_func, &cutoff);
 
                 // Get the current node index, so the edges and faces can be updated and properly appended
                 let node_index = nodes.len();
@@ -58,11 +81,13 @@ pub fn run_marching_cubes<
             }
         }
     }
-    (nodes, faces)
+    
+    // Remove duplicate vertices to reduct runtime performance impact
+    remove_duplicates(Object::new(nodes, faces))
 }
 
 fn marching_cubes<T: AbsArg<Output = f32> + Copy + Mul<f32, Output = T> + Add<Output = T>>(
-    func: &impl Fn(Pos3D) -> T,
+    func: &mut impl FnMut(Pos3D) -> T,
     cutoff: &impl Fn(T) -> bool,
 ) -> (Vec<Node<Pos3D>>, Vec<Face>) {
     let mut nodes: Vec<Node<Pos3D>> = Vec::new();
@@ -134,7 +159,7 @@ fn marching_cubes<T: AbsArg<Output = f32> + Copy + Mul<f32, Output = T> + Add<Ou
     fn edge_to_boundary_vertex<
         T: Copy + AbsArg<Output = f32> + Mul<f32, Output = T> + Add<Output = T>,
     >(
-        func: &impl Fn(Pos3D) -> T,
+        func: &mut impl FnMut(Pos3D) -> T,
         edge_index: usize,
         cutoff: impl Fn(T) -> bool,
     ) -> (Pos3D, T) {
@@ -146,7 +171,7 @@ fn marching_cubes<T: AbsArg<Output = f32> + Copy + Mul<f32, Output = T> + Add<Ou
         let vertex_1_pos = lookup::VERTEX_RELATIVE_POSITION[vertex_1_index];
 
         // Calculate the relative location of the new vertex along the edge
-        let parameter = interpolate(vertex_0_pos, vertex_1_pos, &func, &cutoff, 3);
+        let parameter = interpolate(vertex_0_pos, vertex_1_pos, func, &cutoff, 3);
 
         // Calculate the actual position and value of the new vertex
         let interpolated_pos = vertex_0_pos + (vertex_1_pos - vertex_0_pos) * parameter;
@@ -159,10 +184,10 @@ fn marching_cubes<T: AbsArg<Output = f32> + Copy + Mul<f32, Output = T> + Add<Ou
     fn interpolate<T>(
         start: Pos3D,
         end: Pos3D,
-        func: &impl Fn(Pos3D) -> T,
+        func: &mut impl FnMut(Pos3D) -> T,
         cutoff: &impl Fn(T) -> bool,
         depth: usize,
-    ) -> f32 {
+    ) -> f32 where T: Clone {
         if depth == 0 {
             return 0.5;
         }
